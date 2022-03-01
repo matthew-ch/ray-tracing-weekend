@@ -5,7 +5,7 @@ use std::{
     path::Path,
 };
 
-use ray_tracing_weekend::{Color, Point3, Ray, Vec3};
+use ray_tracing_weekend::{Color, Point3, Ray, Vec3, Float, hit_sphere};
 
 fn write_image_png(data: &[u8], width: u32, height: u32, w: impl Write) {
     let mut encoder = png::Encoder::new(w, width, height);
@@ -16,15 +16,21 @@ fn write_image_png(data: &[u8], width: u32, height: u32, w: impl Write) {
 }
 
 fn ray_color(ray: &Ray) -> Color {
-    let dir = ray.direction().unit_vector();
-    let t = 0.5 * (dir.y() + 1.0);
-    (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
+    if let Some(t) = hit_sphere(&Point3::new(0.0, 0.0, -1.0), 0.5, ray) {
+        let n = ray.at(t) - Point3::new(0.0, 0.0, -1.0);
+        let n = n.unit_vector();
+        0.5 * Color::new(n.x() + 1.0, n.y() + 1.0, n.z() + 1.0)
+    } else {
+        let dir = ray.direction().unit_vector();
+        let t = 0.5 * (dir.y() + 1.0);
+        (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
+    }
 }
 
 fn main() {
     let aspect_ratio = 16.0 / 9.0;
     let image_width = 400;
-    let image_height = (image_width as f64 / aspect_ratio) as u32;
+    let image_height = (image_width as Float / aspect_ratio) as u32;
 
     let viewport_height = 2.0;
     let viewport_width = aspect_ratio * viewport_height;
@@ -39,9 +45,9 @@ fn main() {
     let mut data: Vec<[u8; 3]> = Vec::with_capacity((image_width * image_height) as usize);
 
     for j in (0..image_height).into_iter().rev() {
-        let v = j as f64 / (image_height - 1) as f64;
-        for i in (0..image_width).into_iter().rev() {
-            let u = i as f64 / (image_width - 1) as f64;
+        let v = j as Float / (image_height - 1) as Float;
+        for i in 0..image_width {
+            let u = i as Float / (image_width - 1) as Float;
             let ray = Ray::new(
                 origin,
                 lower_left_corner + u * horizontal + v * vertical - origin,
