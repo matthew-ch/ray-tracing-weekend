@@ -5,7 +5,11 @@ use std::{
     path::Path,
 };
 
-use ray_tracing_weekend::{Color, Point3, Ray, Vec3, Float, hit_sphere};
+use rand::random;
+use ray_tracing_weekend::{
+    make_shared_material, Camera, Color, Dielectric, Float, HitRecord, Hittable, HittableList,
+    Lambertian, Metal, Point3, Ray, Sphere,
+};
 
 fn write_image_png(data: &[u8], width: u32, height: u32, w: impl Write) {
     let mut encoder = png::Encoder::new(w, width, height);
@@ -15,11 +19,21 @@ fn write_image_png(data: &[u8], width: u32, height: u32, w: impl Write) {
     writer.write_image_data(data).unwrap();
 }
 
-fn ray_color(ray: &Ray) -> Color {
-    if let Some(t) = hit_sphere(&Point3::new(0.0, 0.0, -1.0), 0.5, ray) {
-        let n = ray.at(t) - Point3::new(0.0, 0.0, -1.0);
-        let n = n.unit_vector();
-        0.5 * Color::new(n.x() + 1.0, n.y() + 1.0, n.z() + 1.0)
+fn ray_color(ray: &Ray, world: &impl Hittable, depth: i32) -> Color {
+    if depth <= 0 {
+        return Color::default();
+    }
+    let mut rec = HitRecord::default();
+    if world.hit(ray, 0.001, f64::INFINITY, &mut rec) {
+        let mut scattered = Ray::default();
+        let mut attenuation = Color::default();
+        if rec.material.clone().map_or(false, |mat| {
+            mat.scatter(ray, &mut rec, &mut attenuation, &mut scattered)
+        }) {
+            attenuation * ray_color(&scattered, world, depth - 1)
+        } else {
+            Color::default()
+        }
     } else {
         let dir = ray.direction().unit_vector();
         let t = 0.5 * (dir.y() + 1.0);
@@ -31,16 +45,42 @@ fn main() {
     let aspect_ratio = 16.0 / 9.0;
     let image_width = 400;
     let image_height = (image_width as Float / aspect_ratio) as u32;
+    let samples_per_pixel = 100;
+    let max_depth = 50;
 
-    let viewport_height = 2.0;
-    let viewport_width = aspect_ratio * viewport_height;
-    let focal_length = 1.0;
+    let mut world = HittableList::new();
+    let material_ground = make_shared_material(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
+    let material_center = make_shared_material(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
+    let material_left = make_shared_material(Dielectric::new(1.5));
+    let material_right = make_shared_material(Metal::new(Color::new(0.8, 0.6, 0.2), 0.0));
 
-    let origin = Point3::new(0.0, 0.0, 0.0);
-    let horizontal = Vec3::new(viewport_width, 0.0, 0.0);
-    let vertical = Vec3::new(0.0, viewport_height, 0.0);
-    let lower_left_corner =
-        origin - horizontal / 2.0 - vertical / 2.0 - Vec3::new(0.0, 0.0, focal_length);
+    world.add(Box::new(Sphere::new(
+        Point3::new(0.0, -100.5, -1.0),
+        100.0,
+        Some(material_ground),
+    )));
+    world.add(Box::new(Sphere::new(
+        Point3::new(0.0, 0.0, -1.0),
+        0.5,
+        Some(material_center),
+    )));
+    world.add(Box::new(Sphere::new(
+        Point3::new(-1.0, 0.0, -1.0),
+        0.5,
+        Some(material_left.clone()),
+    )));
+    world.add(Box::new(Sphere::new(
+        Point3::new(-1.0, 0.0, -1.0),
+        -0.4,
+        Some(material_left),
+    )));
+    world.add(Box::new(Sphere::new(
+        Point3::new(1.0, 0.0, -1.0),
+        0.5,
+        Some(material_right),
+    )));
+
+    let cam = Camera::new();
 
     let mut data: Vec<[u8; 3]> = Vec::with_capacity((image_width * image_height) as usize);
 
@@ -48,12 +88,16 @@ fn main() {
         let v = j as Float / (image_height - 1) as Float;
         for i in 0..image_width {
             let u = i as Float / (image_width - 1) as Float;
-            let ray = Ray::new(
-                origin,
-                lower_left_corner + u * horizontal + v * vertical - origin,
-            );
-            let color = ray_color(&ray);
-            data.push(color.into());
+            let mut color = Color::new(0.0, 0.0, 0.0);
+            for _ in 0..samples_per_pixel {
+                let ray = cam.get_ray(
+                    u + random::<Float>() / (image_width - 1) as Float,
+                    v + random::<Float>() / (image_height - 1) as Float,
+                );
+                color += ray_color(&ray, &world, max_depth);
+            }
+            color /= samples_per_pixel as Float;
+            data.push(color.apply(Float::sqrt).into());
         }
     }
 
