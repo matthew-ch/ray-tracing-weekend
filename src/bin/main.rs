@@ -6,10 +6,7 @@ use std::{
 };
 
 use rand::random;
-use ray_tracing_weekend::{
-    make_shared_material, Camera, Color, Dielectric, Float, HitRecord, Hittable, HittableList,
-    Lambertian, Metal, Point3, Ray, Sphere,
-};
+use ray_tracing_weekend::*;
 
 fn write_image_png(data: &[u8], width: u32, height: u32, w: impl Write) {
     let mut encoder = png::Encoder::new(w, width, height);
@@ -71,7 +68,7 @@ fn main() {
     )));
     world.add(Box::new(Sphere::new(
         Point3::new(-1.0, 0.0, -1.0),
-        -0.4,
+        -0.45,
         Some(material_left),
     )));
     world.add(Box::new(Sphere::new(
@@ -80,7 +77,19 @@ fn main() {
         Some(material_right),
     )));
 
-    let cam = Camera::new();
+    let lookfrom = Point3::new(3.0, 3.0, 2.0);
+    let lookat = Point3::new(0.0, 0.0, -1.0);
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+    let dist_to_focus = (lookfrom - lookat).length();
+    let cam = Camera::new(
+        lookfrom,
+        lookat,
+        vup,
+        20.0,
+        aspect_ratio,
+        2.0,
+        dist_to_focus,
+    );
 
     let mut data: Vec<[u8; 3]> = Vec::with_capacity((image_width * image_height) as usize);
 

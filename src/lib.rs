@@ -7,6 +7,7 @@ mod sphere;
 mod vec3;
 
 pub type Float = f64;
+pub use std::f64::consts::PI;
 
 pub use camera::Camera;
 pub use hittable::*;
