@@ -2,7 +2,7 @@ use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Range, Sub, 
 
 use rand::random;
 
-use crate::Float;
+use crate::{Float, PI};
 
 #[derive(Debug, Clone, Copy, Default)]
 pub struct Vec3(Float, Float, Float);
@@ -23,16 +23,16 @@ impl Vec3 {
     }
 
     pub fn random_in_unit_sphere() -> Self {
-        loop {
-            let p = Self::random_range(-1.0..1.0);
-            if p.length_squared() < 1.0 {
-                break p;
-            }
-        }
+        Self::random_unit_vector() * random::<Float>()
     }
 
     pub fn random_unit_vector() -> Self {
-        Self::random_in_unit_sphere().unit_vector()
+        let alpha = random::<Float>() * PI;
+        let beta = random::<Float>() * PI * 2.0;
+        let (a, z) = alpha.sin_cos();
+        let (y, x) = beta.sin_cos();
+
+        Self(x * a, y * a, z)
     }
 
     pub const fn x(&self) -> Float {

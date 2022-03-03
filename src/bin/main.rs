@@ -71,60 +71,82 @@ fn render<'a>(
     return image;
 }
 
-fn main() {
-    let aspect_ratio = 16.0 / 9.0;
-    let image_width = 400;
-    let image_height = (image_width as Float / aspect_ratio) as u32;
-    let samples_per_pixel = 100;
-    let max_depth = 50;
-
-    let material_ground = Lambertian::new(Color::new(0.8, 0.8, 0.0));
-    let material_center = Lambertian::new(Color::new(0.1, 0.2, 0.5));
-    let material_left = Dielectric::new(1.5);
-    let material_right = Metal::new(Color::new(0.8, 0.6, 0.2), 0.0);
+fn random_scene() -> HittableList {
     let mut world = HittableList::new();
 
+    let ground_material = Lambertian::new(Color::new(0.5, 0.5, 0.5));
     world.add(Box::new(Sphere::new(
-        Point3::new(0.0, -100.5, -1.0),
-        100.0,
-        Some(Box::new(material_ground)),
-    )));
-    world.add(Box::new(Sphere::new(
-        Point3::new(0.0, 0.0, -1.0),
-        0.5,
-        Some(Box::new(material_center)),
-    )));
-    world.add(Box::new(Sphere::new(
-        Point3::new(-1.0, 0.0, -1.0),
-        0.5,
-        Some(Box::new(material_left)),
-    )));
-    world.add(Box::new(Sphere::new(
-        Point3::new(-1.0, 0.0, -1.0),
-        -0.45,
-        Some(Box::new(material_left)),
-    )));
-    world.add(Box::new(Sphere::new(
-        Point3::new(1.0, 0.0, -1.0),
-        0.5,
-        Some(Box::new(material_right)),
+        Point3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        Some(Box::new(ground_material)),
     )));
 
-    let lookfrom = Point3::new(3.0, 3.0, 2.0);
-    let lookat = Point3::new(0.0, 0.0, -1.0);
+    for a in -11..11 {
+        for b in -11..11 {
+            let center = Point3::new(
+                a as Float + 0.9 * random::<Float>(),
+                0.2,
+                b as Float + 0.9 * random::<Float>(),
+            );
+            if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
+                let material: Box<dyn Material> = match random::<Float>() {
+                    n if n < 0.8 => Box::new(Lambertian::new(Color::random() * Color::random())),
+                    n if n < 0.95 => Box::new(Metal::new(
+                        Color::random_range(0.5..1.0),
+                        random::<Float>() * 0.5,
+                    )),
+                    _ => Box::new(Dielectric::new(1.5)),
+                };
+                world.add(Box::new(Sphere::new(center, 0.2, Some(material))));
+            }
+        }
+    }
+
+    world.add(Box::new(Sphere::new(
+        Point3::new(0.0, 1.0, 0.0),
+        1.0,
+        Some(Box::new(Dielectric::new(1.5))),
+    )));
+
+    world.add(Box::new(Sphere::new(
+        Point3::new(-4.0, 1.0, 0.0),
+        1.0,
+        Some(Box::new(Lambertian::new(Color::new(0.4, 0.2, 0.1)))),
+    )));
+
+    world.add(Box::new(Sphere::new(
+        Point3::new(4.0, 1.0, 0.0),
+        1.0,
+        Some(Box::new(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0))),
+    )));
+
+    world
+}
+
+fn main() {
+    let aspect_ratio = 3.0 / 2.0;
+    let image_width = 1200;
+    let image_height = (image_width as Float / aspect_ratio) as u32;
+    let samples_per_pixel = 50;
+    let max_depth = 50;
+
+    let world = random_scene();
+
+    let lookfrom = Point3::new(13.0, 2.0, 3.0);
+    let lookat = Point3::new(0.0, 0.0, 0.0);
     let vup = Vec3::new(0.0, 1.0, 0.0);
-    let dist_to_focus = (lookfrom - lookat).length();
+    let dist_to_focus = 10.0;
     let cam = Camera::new(
         lookfrom,
         lookat,
         vup,
         20.0,
         aspect_ratio,
-        2.0,
+        0.1,
         dist_to_focus,
     );
 
-    let world = unsafe { transmute::<_, &'static HittableList>(&world) };
+    let world_ref = unsafe { transmute::<_, &'static HittableList>(&world) };
 
     let n_threads = 10;
 
@@ -132,7 +154,7 @@ fn main() {
         .map(|_| {
             spawn(move || {
                 render(
-                    world,
+                    world_ref,
                     cam,
                     image_width,
                     image_height,
