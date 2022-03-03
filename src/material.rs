@@ -1,9 +1,7 @@
-use std::rc::Rc;
-
 use crate::{Color, Float, HitRecord, Ray, Vec3};
 use rand::random;
 
-pub trait Material {
+pub trait Material: Sync + Send {
     fn scatter(
         &self,
         ray_in: &Ray,
@@ -13,12 +11,7 @@ pub trait Material {
     ) -> bool;
 }
 
-pub type SharedMaterial = Rc<Box<dyn Material>>;
-
-pub fn make_shared_material<T: Material + 'static>(material: T) -> SharedMaterial {
-    Rc::new(Box::new(material))
-}
-
+#[derive(Clone, Copy)]
 pub struct Lambertian {
     albedo: Color,
 }
@@ -47,6 +40,7 @@ impl Material for Lambertian {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Metal {
     albedo: Color,
     fuzz: Float,
@@ -76,6 +70,7 @@ impl Material for Metal {
     }
 }
 
+#[derive(Clone, Copy)]
 pub struct Dielectric {
     ir: Float,
 }

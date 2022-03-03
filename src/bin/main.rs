@@ -1,8 +1,10 @@
 use std::{
     fs::File,
+    intrinsics::transmute,
     io::{BufWriter, Write},
     mem::size_of,
     path::Path,
+    thread::spawn,
 };
 
 use rand::random;
@@ -16,7 +18,7 @@ fn write_image_png(data: &[u8], width: u32, height: u32, w: impl Write) {
     writer.write_image_data(data).unwrap();
 }
 
-fn ray_color(ray: &Ray, world: &impl Hittable, depth: i32) -> Color {
+fn ray_color<'a>(ray: &Ray, world: &'a impl Hittable, depth: i32) -> Color {
     if depth <= 0 {
         return Color::default();
     }
@@ -38,6 +40,37 @@ fn ray_color(ray: &Ray, world: &impl Hittable, depth: i32) -> Color {
     }
 }
 
+fn render<'a>(
+    world: &'a impl Hittable,
+    cam: Camera,
+    image_width: u32,
+    image_height: u32,
+    samples_per_pixel: u32,
+    max_depth: i32,
+) -> Vec<Color> {
+    println!("begin render");
+    let mut image: Vec<Color> = Vec::with_capacity((image_width * image_height) as usize);
+
+    for j in (0..image_height).into_iter().rev() {
+        let v = j as Float / (image_height - 1) as Float;
+        for i in 0..image_width {
+            let u = i as Float / (image_width - 1) as Float;
+            let mut color = Color::new(0.0, 0.0, 0.0);
+            for _ in 0..samples_per_pixel {
+                let ray = cam.get_ray(
+                    u + random::<Float>() / (image_width - 1) as Float,
+                    v + random::<Float>() / (image_height - 1) as Float,
+                );
+                color += ray_color(&ray, world, max_depth);
+            }
+            image.push(color);
+        }
+    }
+
+    println!("finish render");
+    return image;
+}
+
 fn main() {
     let aspect_ratio = 16.0 / 9.0;
     let image_width = 400;
@@ -45,36 +78,36 @@ fn main() {
     let samples_per_pixel = 100;
     let max_depth = 50;
 
+    let material_ground = Lambertian::new(Color::new(0.8, 0.8, 0.0));
+    let material_center = Lambertian::new(Color::new(0.1, 0.2, 0.5));
+    let material_left = Dielectric::new(1.5);
+    let material_right = Metal::new(Color::new(0.8, 0.6, 0.2), 0.0);
     let mut world = HittableList::new();
-    let material_ground = make_shared_material(Lambertian::new(Color::new(0.8, 0.8, 0.0)));
-    let material_center = make_shared_material(Lambertian::new(Color::new(0.1, 0.2, 0.5)));
-    let material_left = make_shared_material(Dielectric::new(1.5));
-    let material_right = make_shared_material(Metal::new(Color::new(0.8, 0.6, 0.2), 0.0));
 
     world.add(Box::new(Sphere::new(
         Point3::new(0.0, -100.5, -1.0),
         100.0,
-        Some(material_ground),
+        Some(Box::new(material_ground)),
     )));
     world.add(Box::new(Sphere::new(
         Point3::new(0.0, 0.0, -1.0),
         0.5,
-        Some(material_center),
+        Some(Box::new(material_center)),
     )));
     world.add(Box::new(Sphere::new(
         Point3::new(-1.0, 0.0, -1.0),
         0.5,
-        Some(material_left.clone()),
+        Some(Box::new(material_left)),
     )));
     world.add(Box::new(Sphere::new(
         Point3::new(-1.0, 0.0, -1.0),
         -0.45,
-        Some(material_left),
+        Some(Box::new(material_left)),
     )));
     world.add(Box::new(Sphere::new(
         Point3::new(1.0, 0.0, -1.0),
         0.5,
-        Some(material_right),
+        Some(Box::new(material_right)),
     )));
 
     let lookfrom = Point3::new(3.0, 3.0, 2.0);
@@ -91,24 +124,44 @@ fn main() {
         dist_to_focus,
     );
 
-    let mut data: Vec<[u8; 3]> = Vec::with_capacity((image_width * image_height) as usize);
+    let world = unsafe { transmute::<_, &'static HittableList>(&world) };
 
-    for j in (0..image_height).into_iter().rev() {
-        let v = j as Float / (image_height - 1) as Float;
-        for i in 0..image_width {
-            let u = i as Float / (image_width - 1) as Float;
-            let mut color = Color::new(0.0, 0.0, 0.0);
-            for _ in 0..samples_per_pixel {
-                let ray = cam.get_ray(
-                    u + random::<Float>() / (image_width - 1) as Float,
-                    v + random::<Float>() / (image_height - 1) as Float,
-                );
-                color += ray_color(&ray, &world, max_depth);
+    let n_threads = 10;
+
+    let threads: Vec<_> = (0..n_threads)
+        .map(|_| {
+            spawn(move || {
+                render(
+                    world,
+                    cam,
+                    image_width,
+                    image_height,
+                    samples_per_pixel,
+                    max_depth,
+                )
+            })
+        })
+        .collect();
+
+    let images = threads.into_iter().map(|th| th.join().unwrap());
+
+    let image = images
+        .reduce(|mut accum, item| {
+            for (i, color) in item.into_iter().enumerate() {
+                accum[i] += color;
             }
-            color /= samples_per_pixel as Float;
-            data.push(color.apply(Float::sqrt).into());
-        }
-    }
+            accum
+        })
+        .unwrap();
+
+    let data: Vec<[u8; 3]> = image
+        .into_iter()
+        .map(|color| {
+            (color / (samples_per_pixel * n_threads) as Float)
+                .apply(Float::sqrt)
+                .into()
+        })
+        .collect();
 
     let path = Path::new(r"./output.png");
     let file = File::create(path).unwrap();

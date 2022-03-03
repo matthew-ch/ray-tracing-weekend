@@ -1,15 +1,13 @@
-use std::rc::Rc;
-
 use crate::{Float, HitRecord, Hittable, Material, Point3, Ray};
 
 pub struct Sphere {
     center: Point3,
     radius: Float,
-    material: Option<Rc<Box<dyn Material>>>,
+    material: Option<Box<dyn Material>>,
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: Float, material: Option<Rc<Box<dyn Material>>>) -> Self {
+    pub fn new(center: Point3, radius: Float, material: Option<Box<dyn Material>>) -> Self {
         Self {
             center,
             radius,
@@ -19,7 +17,10 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray, t_min: Float, t_max: Float, rec: &mut HitRecord) -> bool {
+    fn hit<'a, 'b>(&'a self, ray: &Ray, t_min: Float, t_max: Float, rec: &mut HitRecord<'b>) -> bool
+    where
+        'a: 'b,
+    {
         let oc = ray.origin() - self.center;
         let a = ray.direction().length_squared();
         let half_b = oc.dot(&ray.direction());
@@ -43,7 +44,7 @@ impl Hittable for Sphere {
         rec.p = ray.at(root);
         let outward_normal = (rec.p - self.center) / self.radius;
         rec.set_face_normal(ray, outward_normal);
-        rec.material = self.material.clone();
+        rec.material = self.material.as_deref();
 
         true
     }
