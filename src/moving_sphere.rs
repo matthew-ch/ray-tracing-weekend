@@ -1,4 +1,4 @@
-use crate::{Float, HitRecord, Hittable, Material, Point3, Ray};
+use crate::{Float, HitRecord, Hittable, Material, Point3, Ray, Vec3, AABB};
 
 pub struct MovingSphere {
     center0: Point3,
@@ -64,6 +64,20 @@ impl Hittable for MovingSphere {
         rec.set_face_normal(ray, outward_normal);
         rec.material = self.material.as_deref();
 
+        true
+    }
+
+    fn bounding_box(&self, time0: Float, time1: Float, output_box: &mut crate::AABB) -> bool {
+        *output_box = AABB::surrounding_box(
+            AABB::new(
+                self.center(time0) - Vec3::new(self.radius, self.radius, self.radius),
+                self.center(time0) + Vec3::new(self.radius, self.radius, self.radius),
+            ),
+            AABB::new(
+                self.center(time1) - Vec3::new(self.radius, self.radius, self.radius),
+                self.center(time1) + Vec3::new(self.radius, self.radius, self.radius),
+            ),
+        );
         true
     }
 }

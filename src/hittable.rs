@@ -1,4 +1,4 @@
-use crate::{Float, Material, Point3, Ray, Vec3};
+use crate::{Float, Material, Point3, Ray, Vec3, AABB};
 
 #[derive(Default, Clone)]
 pub struct HitRecord<'a> {
@@ -30,4 +30,8 @@ pub trait Hittable: Sync + Send {
     ) -> bool
     where
         'a: 'b;
+
+    fn bounding_box(&self, _time0: Float, _time1: Float, _output_box: &mut AABB) -> bool {
+        false
+    }
 }

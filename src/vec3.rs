@@ -178,12 +178,18 @@ impl DivAssign<Float> for Vec3 {
     }
 }
 
-impl Into<[u8; 3]> for Vec3 {
-    fn into(self) -> [u8; 3] {
+impl From<Vec3> for [u8; 3] {
+    fn from(v: Vec3) -> Self {
         [
-            (self.0 * 255.999) as u8,
-            (self.1 * 255.999) as u8,
-            (self.2 * 255.999) as u8,
+            (v.0 * 255.999) as u8,
+            (v.1 * 255.999) as u8,
+            (v.2 * 255.999) as u8,
         ]
+    }
+}
+
+impl From<Vec3> for [Float; 3] {
+    fn from(v: Vec3) -> Self {
+        [v.0, v.1, v.2]
     }
 }

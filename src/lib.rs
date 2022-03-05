@@ -1,3 +1,5 @@
+mod aabb;
+mod bvh_node;
 mod camera;
 mod hittable;
 mod hittable_list;
@@ -10,6 +12,8 @@ mod vec3;
 pub type Float = f64;
 pub use std::f64::consts::PI;
 
+pub use aabb::AABB;
+pub use bvh_node::BvhNode;
 pub use camera::Camera;
 pub use hittable::*;
 pub use hittable_list::HittableList;

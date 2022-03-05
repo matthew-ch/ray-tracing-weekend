@@ -1,4 +1,4 @@
-use crate::{Float, HitRecord, Hittable, Material, Point3, Ray};
+use crate::{Float, HitRecord, Hittable, Material, Point3, Ray, Vec3, AABB};
 
 pub struct Sphere {
     center: Point3,
@@ -46,6 +46,14 @@ impl Hittable for Sphere {
         rec.set_face_normal(ray, outward_normal);
         rec.material = self.material.as_deref();
 
+        true
+    }
+
+    fn bounding_box(&self, _time0: Float, _time1: Float, output_box: &mut AABB) -> bool {
+        *output_box = AABB::new(
+            self.center - Vec3::new(self.radius, self.radius, self.radius),
+            self.center + Vec3::new(self.radius, self.radius, self.radius),
+        );
         true
     }
 }
