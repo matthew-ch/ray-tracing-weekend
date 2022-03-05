@@ -36,7 +36,8 @@ fn random_scene() -> HittableList {
                 b as Float + 0.9 * random::<Float>(),
             );
             if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
-                let material: Box<dyn Material> = match random::<Float>() {
+                let choose = random::<Float>();
+                let material: Box<dyn Material> = match choose {
                     n if n < 0.8 => Box::new(Lambertian::new(Color::random() * Color::random())),
                     n if n < 0.95 => Box::new(Metal::new(
                         Color::random_range(0.5..1.0),
@@ -44,7 +45,19 @@ fn random_scene() -> HittableList {
                     )),
                     _ => Box::new(Dielectric::new(1.5)),
                 };
-                world.add(Box::new(Sphere::new(center, 0.2, Some(material))));
+                world.add(if choose < 0.8 {
+                    let center1 = center + Vec3::new(0.0, random::<Float>() * 0.5, 0.0);
+                    Box::new(MovingSphere::new(
+                        center,
+                        center1,
+                        0.0,
+                        1.0,
+                        0.2,
+                        Some(material),
+                    ))
+                } else {
+                    Box::new(Sphere::new(center, 0.2, Some(material)))
+                });
             }
         }
     }
@@ -71,10 +84,10 @@ fn random_scene() -> HittableList {
 }
 
 fn main() {
-    let aspect_ratio = 3.0 / 2.0;
-    let image_width = 1200;
+    let aspect_ratio = 16.0 / 9.0;
+    let image_width = 400;
     let image_height = (image_width as Float / aspect_ratio) as u32;
-    let samples_per_pixel = 50;
+    let samples_per_pixel = 10;
     let max_depth = 50;
 
     let world = random_scene();
@@ -91,6 +104,8 @@ fn main() {
         aspect_ratio,
         0.1,
         dist_to_focus,
+        0.0,
+        1.0,
     );
 
     let world_ref = unsafe { transmute::<_, &'static HittableList>(&world) };
