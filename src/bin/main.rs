@@ -21,7 +21,9 @@ fn write_image_png(data: &[u8], width: u32, height: u32, w: impl Write) {
 fn random_scene() -> HittableList {
     let mut world = HittableList::new();
 
-    let ground_material = Lambertian::new(Color::new(0.5, 0.5, 0.5));
+    let checker =
+        CheckerTexture::new_with_color(Color::new(0.2, 0.3, 0.1), Color::new(0.9, 0.9, 0.9));
+    let ground_material = Lambertian::new_with_texture(Box::new(checker));
     world.add(Box::new(Sphere::new(
         Point3::new(0.0, -1000.0, 0.0),
         1000.0,
@@ -38,7 +40,9 @@ fn random_scene() -> HittableList {
             if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 let choose = random::<Float>();
                 let material: Box<dyn Material> = match choose {
-                    n if n < 0.8 => Box::new(Lambertian::new(Color::random() * Color::random())),
+                    n if n < 0.8 => Box::new(Lambertian::new_with_color(
+                        Color::random() * Color::random(),
+                    )),
                     n if n < 0.95 => Box::new(Metal::new(
                         Color::random_range(0.5..1.0),
                         random::<Float>() * 0.5,
@@ -71,7 +75,9 @@ fn random_scene() -> HittableList {
     world.add(Box::new(Sphere::new(
         Point3::new(-4.0, 1.0, 0.0),
         1.0,
-        Some(Box::new(Lambertian::new(Color::new(0.4, 0.2, 0.1)))),
+        Some(Box::new(Lambertian::new_with_color(Color::new(
+            0.4, 0.2, 0.1,
+        )))),
     )));
 
     world.add(Box::new(Sphere::new(
@@ -83,6 +89,23 @@ fn random_scene() -> HittableList {
     world
 }
 
+fn two_spheres() -> HittableList {
+    let mut objects = HittableList::new();
+
+    for y in [-10.0, 10.0] {
+        let checker =
+            CheckerTexture::new_with_color(Color::new(0.2, 0.3, 0.1), Color::new(0.9, 0.9, 0.9));
+
+        objects.add(Box::new(Sphere::new(
+            Point3::new(0.0, y, 0.0),
+            10.0,
+            Some(Box::new(Lambertian::new_with_texture(Box::new(checker)))),
+        )));
+    }
+
+    objects
+}
+
 fn main() {
     let aspect_ratio = 16.0 / 9.0;
     let image_width = 400;
@@ -90,23 +113,41 @@ fn main() {
     let samples_per_pixel = 10;
     let max_depth = 50;
 
-    let world = random_scene();
-
     let lookfrom = Point3::new(13.0, 2.0, 3.0);
     let lookat = Point3::new(0.0, 0.0, 0.0);
     let vup = Vec3::new(0.0, 1.0, 0.0);
     let dist_to_focus = 10.0;
-    let cam = Camera::new(
-        lookfrom,
-        lookat,
-        vup,
-        20.0,
-        aspect_ratio,
-        0.1,
-        dist_to_focus,
-        0.0,
-        1.0,
-    );
+
+    let (world, cam) = match 0 {
+        1 => (
+            random_scene(),
+            Camera::new(
+                lookfrom,
+                lookat,
+                vup,
+                20.0,
+                aspect_ratio,
+                0.1,
+                dist_to_focus,
+                0.0,
+                1.0,
+            ),
+        ),
+        _ => (
+            two_spheres(),
+            Camera::new(
+                lookfrom,
+                lookat,
+                vup,
+                20.0,
+                aspect_ratio,
+                0.0,
+                dist_to_focus,
+                0.0,
+                1.0,
+            ),
+        ),
+    };
 
     let world_ref = unsafe { transmute::<_, &'static HittableList>(&world) };
 

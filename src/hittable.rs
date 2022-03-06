@@ -5,6 +5,8 @@ pub struct HitRecord<'a> {
     pub p: Point3,
     pub normal: Vec3,
     pub t: Float,
+    pub u: Float,
+    pub v: Float,
     pub front_face: bool,
     pub material: Option<&'a dyn Material>,
 }

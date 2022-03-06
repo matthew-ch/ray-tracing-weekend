@@ -1,4 +1,4 @@
-use crate::{Color, Float, HitRecord, Ray, Vec3};
+use crate::{Color, Float, HitRecord, Ray, SolidColor, Texture, Vec3};
 use rand::random;
 
 pub trait Material: Sync + Send {
@@ -11,14 +11,19 @@ pub trait Material: Sync + Send {
     ) -> bool;
 }
 
-#[derive(Clone, Copy)]
 pub struct Lambertian {
-    albedo: Color,
+    albedo: Box<dyn Texture>,
 }
 
 impl Lambertian {
-    pub fn new(color: Color) -> Self {
-        Self { albedo: color }
+    pub fn new_with_color(color: Color) -> Self {
+        Self {
+            albedo: Box::new(SolidColor::from(color)),
+        }
+    }
+
+    pub fn new_with_texture(t: Box<dyn Texture>) -> Self {
+        Self { albedo: t }
     }
 }
 
@@ -35,7 +40,7 @@ impl Material for Lambertian {
             scatter_direction = rec.normal;
         }
         *scattered = Ray::new(rec.p, scatter_direction, ray_in.time());
-        *attenuation = self.albedo;
+        *attenuation = self.albedo.value(rec.u, rec.v, &rec.p);
         true
     }
 }

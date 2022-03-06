@@ -1,4 +1,4 @@
-use crate::{Float, HitRecord, Hittable, Material, Point3, Ray, Vec3, AABB};
+use crate::{Float, HitRecord, Hittable, Material, Point3, Ray, Vec3, AABB, PI};
 
 pub struct Sphere {
     center: Point3,
@@ -13,6 +13,14 @@ impl Sphere {
             radius,
             material,
         }
+    }
+
+    pub fn get_uv(p: &Point3, u: &mut Float, v: &mut Float) {
+        let theta = (-p.y()).acos();
+        let phi = (-p.z()).atan2(p.x()) + PI;
+
+        *u = phi / (2.0 * PI);
+        *v = theta / PI;
     }
 }
 
@@ -44,6 +52,7 @@ impl Hittable for Sphere {
         rec.p = ray.at(root);
         let outward_normal = (rec.p - self.center) / self.radius;
         rec.set_face_normal(ray, outward_normal);
+        Self::get_uv(&outward_normal, &mut rec.u, &mut rec.v);
         rec.material = self.material.as_deref();
 
         true

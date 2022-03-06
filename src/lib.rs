@@ -7,6 +7,7 @@ mod material;
 mod moving_sphere;
 mod ray;
 mod sphere;
+mod texture;
 mod vec3;
 
 pub type Float = f64;
@@ -22,6 +23,7 @@ pub use moving_sphere::MovingSphere;
 use rand::random;
 pub use ray::Ray;
 pub use sphere::Sphere;
+pub use texture::*;
 pub use vec3::Vec3;
 
 pub type Point3 = Vec3;
