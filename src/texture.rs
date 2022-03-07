@@ -1,4 +1,4 @@
-use crate::{Color, Float, Point3};
+use crate::{Color, Float, Perlin, Point3};
 
 pub trait Texture: Sync + Send {
     fn value(&self, u: Float, v: Float, p: &Point3) -> Color;
@@ -50,5 +50,23 @@ impl Texture for CheckerTexture {
         } else {
             self.even.value(u, v, p)
         }
+    }
+}
+
+pub struct NoiseTexture {
+    noise: Perlin,
+}
+
+impl NoiseTexture {
+    pub fn new() -> Self {
+        Self {
+            noise: Perlin::new(),
+        }
+    }
+}
+
+impl Texture for NoiseTexture {
+    fn value(&self, _u: Float, _v: Float, p: &Point3) -> Color {
+        Color::new(1.0, 1.0, 1.0) * self.noise.noise(p)
     }
 }

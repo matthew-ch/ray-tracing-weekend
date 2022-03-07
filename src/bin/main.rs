@@ -106,6 +106,25 @@ fn two_spheres() -> HittableList {
     objects
 }
 
+fn two_perlin_spheres() -> HittableList {
+    let mut objects = HittableList::new();
+
+    for (p, r) in [
+        (Point3::new(0.0, -1000.0, 0.0), 1000.0),
+        (Point3::new(0.0, 2.0, 0.0), 2.0),
+    ] {
+        objects.add(Box::new(Sphere::new(
+            p,
+            r,
+            Some(Box::new(Lambertian::new_with_texture(Box::new(
+                NoiseTexture::new(),
+            )))),
+        )));
+    }
+
+    objects
+}
+
 fn main() {
     let aspect_ratio = 16.0 / 9.0;
     let image_width = 400;
@@ -133,7 +152,7 @@ fn main() {
                 1.0,
             ),
         ),
-        _ => (
+        2 => (
             two_spheres(),
             Camera::new(
                 lookfrom,
@@ -145,6 +164,20 @@ fn main() {
                 dist_to_focus,
                 0.0,
                 1.0,
+            ),
+        ),
+        _ => (
+            two_perlin_spheres(),
+            Camera::new(
+                lookfrom,
+                lookat,
+                vup,
+                20.0,
+                aspect_ratio,
+                0.1,
+                dist_to_focus,
+                0.0,
+                0.1,
             ),
         ),
     };
