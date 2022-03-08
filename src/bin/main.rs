@@ -117,7 +117,7 @@ fn two_perlin_spheres() -> HittableList {
             p,
             r,
             Some(Box::new(Lambertian::new_with_texture(Box::new(
-                NoiseTexture::new(),
+                NoiseTexture::new(4.0),
             )))),
         )));
     }
