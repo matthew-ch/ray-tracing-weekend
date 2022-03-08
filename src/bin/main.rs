@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     intrinsics::transmute,
-    io::{BufWriter, Write},
+    io::{BufWriter, Write, Read},
     mem::size_of,
     path::Path,
     thread::spawn,
@@ -16,6 +16,16 @@ fn write_image_png(data: &[u8], width: u32, height: u32, w: impl Write) {
     encoder.set_depth(png::BitDepth::Eight);
     let mut writer = encoder.write_header().unwrap();
     writer.write_image_data(data).unwrap();
+}
+
+fn read_png(file: impl Read) -> (Vec<u8>, u32, u32) {
+    let mut decoder = png::Decoder::new(file);
+    decoder.set_transformations(png::Transformations::EXPAND);
+    let mut reader = decoder.read_info().unwrap();
+    let mut buf = vec![0; reader.output_buffer_size()];
+    let info = reader.next_frame(&mut buf).unwrap();
+    buf.truncate(info.buffer_size());
+    (buf, info.width, info.height)
 }
 
 fn random_scene() -> HittableList {
@@ -125,6 +135,14 @@ fn two_perlin_spheres() -> HittableList {
     objects
 }
 
+fn earth() -> HittableList {
+    let (data, width, height) = read_png(File::open(Path::new(r"./earthmap.png")).unwrap());
+    let earth_texture = ImageTexture::new(data, width, height);
+    let earth_surface = Lambertian::new_with_texture(Box::new(earth_texture));
+    let globe = Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, Some(Box::new(earth_surface)));
+    HittableList::new_with(Box::new(globe))
+}
+
 fn main() {
     let aspect_ratio = 16.0 / 9.0;
     let image_width = 400;
@@ -166,7 +184,7 @@ fn main() {
                 1.0,
             ),
         ),
-        _ => (
+        3 => (
             two_perlin_spheres(),
             Camera::new(
                 lookfrom,
@@ -180,6 +198,19 @@ fn main() {
                 0.1,
             ),
         ),
+        _ => (
+            earth(),
+            Camera::new(
+                lookfrom, 
+                lookat, 
+                vup, 
+                20.0, 
+                aspect_ratio, 
+                0.1, 
+                dist_to_focus, 
+                0.0, 
+                1.0),
+        )
     };
 
     let world_ref = unsafe { transmute::<_, &'static HittableList>(&world) };

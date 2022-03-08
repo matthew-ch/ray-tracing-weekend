@@ -1,3 +1,5 @@
+use std::mem;
+
 use crate::{Color, Float, Perlin, Point3};
 
 pub trait Texture: Sync + Send {
@@ -72,5 +74,51 @@ impl Texture for NoiseTexture {
         Color::new(1.0, 1.0, 1.0)
             * 0.5
             * (1.0 + (p.z() * self.scale + 10.0 * self.noise.turb(p, 7)).sin())
+    }
+}
+
+pub struct ImageTexture {
+    data: Vec<[u8; 3]>,
+    width: usize,
+    height: usize,
+}
+
+impl ImageTexture {
+    const BYTES_PER_PIXEL: usize = 3;
+
+    pub fn new(data: Vec<u8>, width: u32, height: u32) -> Self {
+        let mut data = mem::ManuallyDrop::new(data);
+        let width = width as usize;
+        let height = height as usize;
+        assert_eq!(data.len(), width * height * Self::BYTES_PER_PIXEL);
+        assert_eq!(mem::align_of::<u8>(), mem::align_of::<[u8; 3]>());
+        let new_data = unsafe {
+            let ptr = data.as_mut_ptr() as *mut [u8; 3];
+            Vec::from_raw_parts(ptr, data.len() / Self::BYTES_PER_PIXEL, data.capacity() / Self::BYTES_PER_PIXEL)
+        };
+
+        Self {
+            data: new_data,
+            width,
+            height,
+        }
+    }
+}
+
+impl Texture for ImageTexture {
+    fn value(&self, u: Float, v: Float, _p: &Point3) -> Color {
+        if self.data.len() == 0 {
+            return Color::new(0.0, 1.0, 1.0);
+        }
+        let u = u.clamp(0.0, 1.0);
+        let v = 1.0 - v.clamp(0.0, 1.0);
+        let i = ((u * self.width as Float) as usize).min(self.width - 1);
+        let j = ((v * self.height as Float) as usize).min(self.height - 1);
+
+        let color_scale = 1.0 / 255.0;
+        let pixel = self.data[j * self.width + i];
+
+        Color::new(pixel[0] as Float * color_scale, pixel[1] as Float * color_scale, pixel[2] as Float * color_scale)
+
     }
 }
