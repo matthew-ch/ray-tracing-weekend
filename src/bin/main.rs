@@ -1,7 +1,7 @@
 use std::{
     fs::File,
     intrinsics::transmute,
-    io::{BufWriter, Write, Read},
+    io::{BufWriter, Read, Write},
     mem::size_of,
     path::Path,
     thread::spawn,
@@ -33,12 +33,12 @@ fn random_scene() -> HittableList {
 
     let checker =
         CheckerTexture::new_with_color(Color::new(0.2, 0.3, 0.1), Color::new(0.9, 0.9, 0.9));
-    let ground_material = Lambertian::new_with_texture(Box::new(checker));
-    world.add(Box::new(Sphere::new(
+    let ground_material = Lambertian::new_with_texture(checker);
+    world.add(Sphere::new(
         Point3::new(0.0, -1000.0, 0.0),
         1000.0,
-        Some(Box::new(ground_material)),
-    )));
+        Some(ground_material),
+    ));
 
     for a in -11..11 {
         for b in -11..11 {
@@ -49,52 +49,51 @@ fn random_scene() -> HittableList {
             );
             if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
                 let choose = random::<Float>();
-                let material: Box<dyn Material> = match choose {
-                    n if n < 0.8 => Box::new(Lambertian::new_with_color(
-                        Color::random() * Color::random(),
-                    )),
-                    n if n < 0.95 => Box::new(Metal::new(
-                        Color::random_range(0.5..1.0),
-                        random::<Float>() * 0.5,
-                    )),
-                    _ => Box::new(Dielectric::new(1.5)),
-                };
-                world.add(if choose < 0.8 {
+                if choose < 0.8 {
                     let center1 = center + Vec3::new(0.0, random::<Float>() * 0.5, 0.0);
-                    Box::new(MovingSphere::new(
+                    world.add(MovingSphere::new(
                         center,
                         center1,
                         0.0,
                         1.0,
                         0.2,
-                        Some(material),
-                    ))
+                        Some(Lambertian::new_with_color(
+                            Color::random() * Color::random(),
+                        )),
+                    ));
+                } else if choose < 0.95 {
+                    world.add(Sphere::new(
+                        center,
+                        0.2,
+                        Some(Metal::new(
+                            Color::random_range(0.5..1.0),
+                            random::<Float>() * 0.5,
+                        )),
+                    ));
                 } else {
-                    Box::new(Sphere::new(center, 0.2, Some(material)))
-                });
+                    world.add(Sphere::new(center, 0.2, Some(Dielectric::new(1.5))));
+                }
             }
         }
     }
 
-    world.add(Box::new(Sphere::new(
+    world.add(Sphere::new(
         Point3::new(0.0, 1.0, 0.0),
         1.0,
-        Some(Box::new(Dielectric::new(1.5))),
-    )));
+        Some(Dielectric::new(1.5)),
+    ));
 
-    world.add(Box::new(Sphere::new(
+    world.add(Sphere::new(
         Point3::new(-4.0, 1.0, 0.0),
         1.0,
-        Some(Box::new(Lambertian::new_with_color(Color::new(
-            0.4, 0.2, 0.1,
-        )))),
-    )));
+        Some(Lambertian::new_with_color(Color::new(0.4, 0.2, 0.1))),
+    ));
 
-    world.add(Box::new(Sphere::new(
+    world.add(Sphere::new(
         Point3::new(4.0, 1.0, 0.0),
         1.0,
-        Some(Box::new(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0))),
-    )));
+        Some(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0)),
+    ));
 
     world
 }
@@ -106,11 +105,11 @@ fn two_spheres() -> HittableList {
         let checker =
             CheckerTexture::new_with_color(Color::new(0.2, 0.3, 0.1), Color::new(0.9, 0.9, 0.9));
 
-        objects.add(Box::new(Sphere::new(
+        objects.add(Sphere::new(
             Point3::new(0.0, y, 0.0),
             10.0,
-            Some(Box::new(Lambertian::new_with_texture(Box::new(checker)))),
-        )));
+            Some(Lambertian::new_with_texture(checker)),
+        ));
     }
 
     objects
@@ -123,13 +122,11 @@ fn two_perlin_spheres() -> HittableList {
         (Point3::new(0.0, -1000.0, 0.0), 1000.0),
         (Point3::new(0.0, 2.0, 0.0), 2.0),
     ] {
-        objects.add(Box::new(Sphere::new(
+        objects.add(Sphere::new(
             p,
             r,
-            Some(Box::new(Lambertian::new_with_texture(Box::new(
-                NoiseTexture::new(4.0),
-            )))),
-        )));
+            Some(Lambertian::new_with_texture(NoiseTexture::new(4.0))),
+        ));
     }
 
     objects
@@ -138,9 +135,9 @@ fn two_perlin_spheres() -> HittableList {
 fn earth() -> HittableList {
     let (data, width, height) = read_png(File::open(Path::new(r"./earthmap.png")).unwrap());
     let earth_texture = ImageTexture::new(data, width, height);
-    let earth_surface = Lambertian::new_with_texture(Box::new(earth_texture));
-    let globe = Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, Some(Box::new(earth_surface)));
-    HittableList::new_with(Box::new(globe))
+    let earth_surface = Lambertian::new_with_texture(earth_texture);
+    let globe = Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, Some(earth_surface));
+    HittableList::new_with(globe)
 }
 
 fn main() {
@@ -201,16 +198,17 @@ fn main() {
         _ => (
             earth(),
             Camera::new(
-                lookfrom, 
-                lookat, 
-                vup, 
-                20.0, 
-                aspect_ratio, 
-                0.1, 
-                dist_to_focus, 
-                0.0, 
-                1.0),
-        )
+                lookfrom,
+                lookat,
+                vup,
+                20.0,
+                aspect_ratio,
+                0.1,
+                dist_to_focus,
+                0.0,
+                1.0,
+            ),
+        ),
     };
 
     let world_ref = unsafe { transmute::<_, &'static HittableList>(&world) };

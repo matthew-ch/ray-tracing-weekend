@@ -7,11 +7,11 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: Float, material: Option<Box<dyn Material>>) -> Self {
+    pub fn new(center: Point3, radius: Float, material: Option<impl Material + 'static>) -> Self {
         Self {
             center,
             radius,
-            material,
+            material: material.map(|m| Box::new(m) as Box<dyn Material>),
         }
     }
 

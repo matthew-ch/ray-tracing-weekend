@@ -13,14 +13,14 @@ impl HittableList {
         }
     }
 
-    pub fn new_with(object: Item) -> Self {
+    pub fn new_with(object: impl Hittable + 'static) -> Self {
         let mut list = Self::new();
         list.add(object);
         list
     }
 
-    pub fn add(&mut self, object: Item) {
-        self.objects.push(object);
+    pub fn add(&mut self, object: impl Hittable + 'static) {
+        self.objects.push(Box::new(object));
     }
 }
 

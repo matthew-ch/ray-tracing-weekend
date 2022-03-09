@@ -94,7 +94,11 @@ impl ImageTexture {
         assert_eq!(mem::align_of::<u8>(), mem::align_of::<[u8; 3]>());
         let new_data = unsafe {
             let ptr = data.as_mut_ptr() as *mut [u8; 3];
-            Vec::from_raw_parts(ptr, data.len() / Self::BYTES_PER_PIXEL, data.capacity() / Self::BYTES_PER_PIXEL)
+            Vec::from_raw_parts(
+                ptr,
+                data.len() / Self::BYTES_PER_PIXEL,
+                data.capacity() / Self::BYTES_PER_PIXEL,
+            )
         };
 
         Self {
@@ -118,7 +122,10 @@ impl Texture for ImageTexture {
         let color_scale = 1.0 / 255.0;
         let pixel = self.data[j * self.width + i];
 
-        Color::new(pixel[0] as Float * color_scale, pixel[1] as Float * color_scale, pixel[2] as Float * color_scale)
-
+        Color::new(
+            pixel[0] as Float * color_scale,
+            pixel[1] as Float * color_scale,
+            pixel[2] as Float * color_scale,
+        )
     }
 }

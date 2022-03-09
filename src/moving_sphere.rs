@@ -16,7 +16,7 @@ impl MovingSphere {
         time0: Float,
         time1: Float,
         radius: Float,
-        material: Option<Box<dyn Material>>,
+        material: Option<impl Material + 'static>,
     ) -> Self {
         Self {
             center0,
@@ -24,7 +24,7 @@ impl MovingSphere {
             time0,
             time1,
             radius,
-            material,
+            material: material.map(|m| Box::new(m) as Box<dyn Material>),
         }
     }
 

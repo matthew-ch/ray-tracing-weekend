@@ -22,8 +22,10 @@ impl Lambertian {
         }
     }
 
-    pub fn new_with_texture(t: Box<dyn Texture>) -> Self {
-        Self { albedo: t }
+    pub fn new_with_texture(t: impl Texture + 'static) -> Self {
+        Self {
+            albedo: Box::new(t),
+        }
     }
 }
 
