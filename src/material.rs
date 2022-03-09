@@ -1,4 +1,4 @@
-use crate::{Color, Float, HitRecord, Ray, SolidColor, Texture, Vec3};
+use crate::{Color, Float, HitRecord, Point3, Ray, SolidColor, Texture, Vec3};
 use rand::random;
 
 pub trait Material: Sync + Send {
@@ -9,6 +9,10 @@ pub trait Material: Sync + Send {
         attenuation: &mut Color,
         scattered: &mut Ray,
     ) -> bool;
+
+    fn emitted(&self, _u: Float, _v: Float, _p: &Point3) -> Color {
+        Color::default()
+    }
 }
 
 pub struct Lambertian {
@@ -128,5 +132,39 @@ impl Material for Dielectric {
             };
         *scattered = Ray::new(rec.p, direction, ray_in.time());
         true
+    }
+}
+
+pub struct DiffuseLight {
+    emit: Box<dyn Texture>,
+}
+
+impl DiffuseLight {
+    pub fn new_with_color(color: Color) -> Self {
+        Self {
+            emit: Box::new(SolidColor::from(color)),
+        }
+    }
+
+    pub fn new_with_texture(texture: impl Texture + 'static) -> Self {
+        Self {
+            emit: Box::new(texture),
+        }
+    }
+}
+
+impl Material for DiffuseLight {
+    fn scatter(
+        &self,
+        _ray_in: &Ray,
+        _rec: &HitRecord,
+        _attenuation: &mut Color,
+        _scattered: &mut Ray,
+    ) -> bool {
+        false
+    }
+
+    fn emitted(&self, u: Float, v: Float, p: &Point3) -> Color {
+        self.emit.value(u, v, p)
     }
 }

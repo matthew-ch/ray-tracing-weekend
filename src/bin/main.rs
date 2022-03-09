@@ -140,76 +140,106 @@ fn earth() -> HittableList {
     HittableList::new_with(globe)
 }
 
+fn simple_light() -> HittableList {
+    let mut objects = two_perlin_spheres();
+
+    objects.add(Sphere::new(
+        Point3::new(0.0, 7.0, 0.0),
+        2.0,
+        Some(DiffuseLight::new_with_color(Color::new(4.0, 4.0, 4.0))),
+    ));
+
+    objects.add(XyRect::new(
+        3.0,
+        5.0,
+        1.0,
+        3.0,
+        -2.0,
+        Some(DiffuseLight::new_with_color(Color::new(4.0, 4.0, 4.0))),
+    ));
+
+    objects
+}
+
+fn cornell_box() -> HittableList {
+    let mut objects = HittableList::new();
+
+    let red = Lambertian::new_with_color(Color::new(0.65, 0.05, 0.05));
+    let make_white = || Some(Lambertian::new_with_color(Color::new(0.73, 0.73, 0.73)));
+    let green = Lambertian::new_with_color(Color::new(0.12, 0.45, 0.15));
+    let light = DiffuseLight::new_with_color(Color::new(15.0, 15.0, 15.0));
+
+    objects.add(YzRect::new(0.0, 555.0, 0.0, 555.0, 555.0, Some(green)));
+
+    objects.add(YzRect::new(0.0, 555.0, 0.0, 555.0, 0.0, Some(red)));
+
+    objects.add(XzRect::new(213.0, 343.0, 227.0, 332.0, 554.0, Some(light)));
+
+    objects.add(XzRect::new(0.0, 555.0, 0.0, 555.0, 0.0, make_white()));
+
+    objects.add(XzRect::new(0.0, 555.0, 0.0, 555.0, 555.0, make_white()));
+
+    objects.add(XyRect::new(0.0, 555.0, 0.0, 555.0, 555.0, make_white()));
+
+    objects
+}
+
 fn main() {
-    let aspect_ratio = 16.0 / 9.0;
-    let image_width = 400;
-    let image_height = (image_width as Float / aspect_ratio) as u32;
-    let samples_per_pixel = 10;
+    let mut aspect_ratio = 16.0 / 9.0;
+    let mut image_width = 400;
+    let mut samples_per_pixel = 10;
     let max_depth = 50;
 
-    let lookfrom = Point3::new(13.0, 2.0, 3.0);
-    let lookat = Point3::new(0.0, 0.0, 0.0);
+    let mut lookfrom = Point3::new(13.0, 2.0, 3.0);
+    let mut lookat = Point3::new(0.0, 0.0, 0.0);
+    let mut vfov = 20.0;
     let vup = Vec3::new(0.0, 1.0, 0.0);
-    let dist_to_focus = 10.0;
+    let mut aperture = 0.1;
+    let mut focus_dist = 10.0;
+    let mut background = Color::new(0.7, 0.8, 1.0);
 
-    let (world, cam) = match 0 {
-        1 => (
-            random_scene(),
-            Camera::new(
-                lookfrom,
-                lookat,
-                vup,
-                20.0,
-                aspect_ratio,
-                0.1,
-                dist_to_focus,
-                0.0,
-                1.0,
-            ),
-        ),
-        2 => (
-            two_spheres(),
-            Camera::new(
-                lookfrom,
-                lookat,
-                vup,
-                20.0,
-                aspect_ratio,
-                0.0,
-                dist_to_focus,
-                0.0,
-                1.0,
-            ),
-        ),
-        3 => (
-            two_perlin_spheres(),
-            Camera::new(
-                lookfrom,
-                lookat,
-                vup,
-                20.0,
-                aspect_ratio,
-                0.1,
-                dist_to_focus,
-                0.0,
-                0.1,
-            ),
-        ),
-        _ => (
-            earth(),
-            Camera::new(
-                lookfrom,
-                lookat,
-                vup,
-                20.0,
-                aspect_ratio,
-                0.1,
-                dist_to_focus,
-                0.0,
-                1.0,
-            ),
-        ),
+    let world = match 0 {
+        1 => random_scene(),
+        2 => {
+            aperture = 0.0;
+            two_spheres()
+        }
+        3 => two_perlin_spheres(),
+        4 => earth(),
+        5 => {
+            background = Color::default();
+            samples_per_pixel = 40;
+            focus_dist = 20.0;
+            lookfrom = Point3::new(26.0, 3.0, 6.0);
+            lookat = Point3::new(0.0, 2.0, 0.0);
+            simple_light()
+        }
+        _ => {
+            aspect_ratio = 1.0;
+            image_width = 600;
+            samples_per_pixel = 20;
+            lookfrom = Point3::new(278.0, 278.0, -800.0);
+            lookat = Point3::new(278.0, 278.0, 0.0);
+            background = Color::default();
+            vfov = 40.0;
+            aperture = 0.0;
+            cornell_box()
+        }
     };
+
+    let image_height = (image_width as Float / aspect_ratio) as u32;
+
+    let cam = Camera::new(
+        lookfrom,
+        lookat,
+        vup,
+        vfov,
+        aspect_ratio,
+        aperture,
+        focus_dist,
+        0.0,
+        1.0,
+    );
 
     let world_ref = unsafe { transmute::<_, &'static HittableList>(&world) };
 
@@ -220,6 +250,7 @@ fn main() {
             spawn(move || {
                 render(
                     world_ref,
+                    background,
                     cam,
                     image_width,
                     image_height,

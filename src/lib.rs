@@ -7,6 +7,7 @@ mod material;
 mod moving_sphere;
 mod perlin;
 mod ray;
+mod rect;
 mod sphere;
 mod texture;
 mod vec3;
@@ -24,6 +25,7 @@ pub use moving_sphere::MovingSphere;
 pub use perlin::Perlin;
 use rand::random;
 pub use ray::Ray;
+pub use rect::*;
 pub use sphere::Sphere;
 pub use texture::*;
 pub use vec3::Vec3;
@@ -45,30 +47,32 @@ pub fn hit_sphere(center: &Point3, radius: Float, ray: &Ray) -> Option<Float> {
     }
 }
 
-pub fn ray_color<'a>(ray: &Ray, world: &'a impl Hittable, depth: i32) -> Color {
+pub fn ray_color<'a>(ray: &Ray, background: &Color, world: &'a impl Hittable, depth: i32) -> Color {
     if depth <= 0 {
         return Color::default();
     }
     let mut rec = HitRecord::default();
-    if world.hit(ray, 0.001, f64::INFINITY, &mut rec) {
-        let mut scattered = Ray::default();
-        let mut attenuation = Color::default();
-        if rec.material.clone().map_or(false, |mat| {
-            mat.scatter(ray, &mut rec, &mut attenuation, &mut scattered)
-        }) {
-            attenuation * ray_color(&scattered, world, depth - 1)
-        } else {
-            Color::default()
-        }
+    if !world.hit(ray, 0.001, f64::INFINITY, &mut rec) {
+        return background.clone();
+    }
+    let mut scattered = Ray::default();
+    let mut attenuation = Color::default();
+    let emitted = rec
+        .material
+        .map_or(Color::default(), |m| m.emitted(rec.u, rec.v, &rec.p));
+
+    if !rec.material.map_or(false, |mat| {
+        mat.scatter(ray, &mut rec, &mut attenuation, &mut scattered)
+    }) {
+        emitted
     } else {
-        let dir = ray.direction().unit_vector();
-        let t = 0.5 * (dir.y() + 1.0);
-        (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
+        emitted + attenuation * ray_color(&scattered, background, world, depth - 1)
     }
 }
 
 pub fn render<'a>(
     world: &'a impl Hittable,
+    background: Color,
     cam: Camera,
     image_width: u32,
     image_height: u32,
@@ -88,7 +92,7 @@ pub fn render<'a>(
                     u + random::<Float>() / (image_width - 1) as Float,
                     v + random::<Float>() / (image_height - 1) as Float,
                 );
-                color += ray_color(&ray, world, max_depth);
+                color += ray_color(&ray, &background, world, max_depth);
             }
             image.push(color);
         }
