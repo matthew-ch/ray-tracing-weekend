@@ -1,4 +1,5 @@
 mod aabb;
+mod block_box;
 mod bvh_node;
 mod camera;
 mod hittable;
@@ -10,12 +11,14 @@ mod ray;
 mod rect;
 mod sphere;
 mod texture;
+mod translate;
 mod vec3;
 
 pub type Float = f64;
 pub use std::f64::consts::PI;
 
 pub use aabb::AABB;
+pub use block_box::BlockBox;
 pub use bvh_node::BvhNode;
 pub use camera::Camera;
 pub use hittable::*;
@@ -28,6 +31,7 @@ pub use ray::Ray;
 pub use rect::*;
 pub use sphere::Sphere;
 pub use texture::*;
+pub use translate::Translate;
 pub use vec3::Vec3;
 
 pub type Point3 = Vec3;

@@ -15,6 +15,70 @@ pub trait Material: Sync + Send {
     }
 }
 
+pub enum UnsafeMaterialWrapper<T: Material> {
+    Owner(*mut T),
+    Borrower(*const T),
+}
+
+unsafe impl<T: Material> Send for UnsafeMaterialWrapper<T> {}
+
+unsafe impl<T: Material> Sync for UnsafeMaterialWrapper<T> {}
+
+impl<T: Material> UnsafeMaterialWrapper<T> {
+    pub fn new(material: T) -> Self {
+        let boxed = Box::new(material);
+        Self::Owner(Box::into_raw(boxed))
+    }
+
+    pub fn borrow(other: &Self) -> Self {
+        match other {
+            UnsafeMaterialWrapper::Owner(m) => Self::Borrower(*m),
+            UnsafeMaterialWrapper::Borrower(n) => Self::Borrower(*n),
+        }
+    }
+}
+
+impl<T: Material> Clone for UnsafeMaterialWrapper<T> {
+    fn clone(&self) -> Self {
+        Self::borrow(self)
+    }
+}
+
+impl<T: Material> Drop for UnsafeMaterialWrapper<T> {
+    fn drop(&mut self) {
+        match self {
+            UnsafeMaterialWrapper::Owner(m) => unsafe { drop(Box::from_raw(*m)) },
+            UnsafeMaterialWrapper::Borrower(_) => {}
+        }
+    }
+}
+
+impl<T: Material> Material for UnsafeMaterialWrapper<T> {
+    fn emitted(&self, u: Float, v: Float, p: &Point3) -> Color {
+        match self {
+            UnsafeMaterialWrapper::Owner(m) => unsafe { (**m).emitted(u, v, p) },
+            UnsafeMaterialWrapper::Borrower(n) => unsafe { (**n).emitted(u, v, p) },
+        }
+    }
+
+    fn scatter(
+        &self,
+        ray_in: &Ray,
+        rec: &HitRecord,
+        attenuation: &mut Color,
+        scattered: &mut Ray,
+    ) -> bool {
+        match self {
+            UnsafeMaterialWrapper::Owner(m) => unsafe {
+                (**m).scatter(ray_in, rec, attenuation, scattered)
+            },
+            UnsafeMaterialWrapper::Borrower(n) => unsafe {
+                (**n).scatter(ray_in, rec, attenuation, scattered)
+            },
+        }
+    }
+}
+
 pub struct Lambertian {
     albedo: Box<dyn Texture>,
 }

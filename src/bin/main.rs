@@ -181,6 +181,17 @@ fn cornell_box() -> HittableList {
 
     objects.add(XyRect::new(0.0, 555.0, 0.0, 555.0, 555.0, make_white()));
 
+    objects.add(BlockBox::new(
+        Point3::new(130.0, 0.0, 65.0),
+        Point3::new(295.0, 165.0, 230.0),
+        make_white(),
+    ));
+    objects.add(BlockBox::new(
+        Point3::new(265.0, 0.0, 295.0),
+        Point3::new(430.0, 330.0, 460.0),
+        make_white(),
+    ));
+
     objects
 }
 
