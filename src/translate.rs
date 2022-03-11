@@ -1,14 +1,16 @@
+use std::sync::Arc;
+
 use crate::{Float, Hittable, Ray, Vec3, AABB};
 
 pub struct Translate {
-    inner: Box<dyn Hittable>,
+    inner: Arc<dyn Hittable>,
     offset: Vec3,
 }
 
 impl Translate {
-    pub fn new(p: impl Hittable + 'static, displacement: Vec3) -> Self {
+    pub fn new(p: Arc<dyn Hittable>, displacement: Vec3) -> Self {
         Self {
-            inner: Box::new(p),
+            inner: p,
             offset: displacement,
         }
     }

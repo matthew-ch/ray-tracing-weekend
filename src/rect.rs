@@ -1,9 +1,10 @@
 use crate::{Float, HitRecord, Hittable, Material, Point3, Ray, Vec3, AABB};
+use std::sync::Arc;
 
 macro_rules! makeRect {
     ($name: ident, $a: ident, $a0: ident, $a1: ident, $b: ident, $b0: ident, $b1: ident, $c: ident, $p0: ident, $p1: ident, $on: expr) => {
         pub struct $name {
-            material: Option<Box<dyn Material>>,
+            material: Arc<dyn Material>,
             $a0: Float,
             $a1: Float,
             $b0: Float,
@@ -18,7 +19,7 @@ macro_rules! makeRect {
                 $b0: Float,
                 $b1: Float,
                 k: Float,
-                material: Option<impl Material + 'static>,
+                material: Arc<dyn Material>,
             ) -> Self {
                 Self {
                     $a0,
@@ -26,7 +27,7 @@ macro_rules! makeRect {
                     $b0,
                     $b1,
                     k,
-                    material: material.map(|m| Box::new(m) as Box<dyn Material>),
+                    material,
                 }
             }
         }
@@ -64,7 +65,7 @@ macro_rules! makeRect {
                 rec.t = t;
                 let outward_normal = $on;
                 rec.set_face_normal(ray, outward_normal);
-                rec.material = self.material.as_deref();
+                rec.material = Some(&*self.material);
                 rec.p = ray.at(t);
                 true
             }

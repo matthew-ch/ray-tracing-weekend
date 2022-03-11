@@ -4,6 +4,7 @@ use std::{
     io::{BufWriter, Read, Write},
     mem::size_of,
     path::Path,
+    sync::Arc,
     thread::spawn,
 };
 
@@ -37,7 +38,7 @@ fn random_scene() -> HittableList {
     world.add(Sphere::new(
         Point3::new(0.0, -1000.0, 0.0),
         1000.0,
-        Some(ground_material),
+        Arc::new(ground_material),
     ));
 
     for a in -11..11 {
@@ -57,7 +58,7 @@ fn random_scene() -> HittableList {
                         0.0,
                         1.0,
                         0.2,
-                        Some(Lambertian::new_with_color(
+                        Arc::new(Lambertian::new_with_color(
                             Color::random() * Color::random(),
                         )),
                     ));
@@ -65,13 +66,13 @@ fn random_scene() -> HittableList {
                     world.add(Sphere::new(
                         center,
                         0.2,
-                        Some(Metal::new(
+                        Arc::new(Metal::new(
                             Color::random_range(0.5..1.0),
                             random::<Float>() * 0.5,
                         )),
                     ));
                 } else {
-                    world.add(Sphere::new(center, 0.2, Some(Dielectric::new(1.5))));
+                    world.add(Sphere::new(center, 0.2, Arc::new(Dielectric::new(1.5))));
                 }
             }
         }
@@ -80,19 +81,19 @@ fn random_scene() -> HittableList {
     world.add(Sphere::new(
         Point3::new(0.0, 1.0, 0.0),
         1.0,
-        Some(Dielectric::new(1.5)),
+        Arc::new(Dielectric::new(1.5)),
     ));
 
     world.add(Sphere::new(
         Point3::new(-4.0, 1.0, 0.0),
         1.0,
-        Some(Lambertian::new_with_color(Color::new(0.4, 0.2, 0.1))),
+        Arc::new(Lambertian::new_with_color(Color::new(0.4, 0.2, 0.1))),
     ));
 
     world.add(Sphere::new(
         Point3::new(4.0, 1.0, 0.0),
         1.0,
-        Some(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0)),
+        Arc::new(Metal::new(Color::new(0.7, 0.6, 0.5), 0.0)),
     ));
 
     world
@@ -108,7 +109,7 @@ fn two_spheres() -> HittableList {
         objects.add(Sphere::new(
             Point3::new(0.0, y, 0.0),
             10.0,
-            Some(Lambertian::new_with_texture(checker)),
+            Arc::new(Lambertian::new_with_texture(checker)),
         ));
     }
 
@@ -125,7 +126,7 @@ fn two_perlin_spheres() -> HittableList {
         objects.add(Sphere::new(
             p,
             r,
-            Some(Lambertian::new_with_texture(NoiseTexture::new(4.0))),
+            Arc::new(Lambertian::new_with_texture(NoiseTexture::new(4.0))),
         ));
     }
 
@@ -136,27 +137,18 @@ fn earth() -> HittableList {
     let (data, width, height) = read_png(File::open(Path::new(r"./earthmap.png")).unwrap());
     let earth_texture = ImageTexture::new(data, width, height);
     let earth_surface = Lambertian::new_with_texture(earth_texture);
-    let globe = Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, Some(earth_surface));
+    let globe = Sphere::new(Point3::new(0.0, 0.0, 0.0), 2.0, Arc::new(earth_surface));
     HittableList::new_with(globe)
 }
 
 fn simple_light() -> HittableList {
     let mut objects = two_perlin_spheres();
 
-    objects.add(Sphere::new(
-        Point3::new(0.0, 7.0, 0.0),
-        2.0,
-        Some(DiffuseLight::new_with_color(Color::new(4.0, 4.0, 4.0))),
-    ));
+    let light = Arc::new(DiffuseLight::new_with_color(Color::new(4.0, 4.0, 4.0)));
 
-    objects.add(XyRect::new(
-        3.0,
-        5.0,
-        1.0,
-        3.0,
-        -2.0,
-        Some(DiffuseLight::new_with_color(Color::new(4.0, 4.0, 4.0))),
-    ));
+    objects.add(Sphere::new(Point3::new(0.0, 7.0, 0.0), 2.0, light.clone()));
+
+    objects.add(XyRect::new(3.0, 5.0, 1.0, 3.0, -2.0, light));
 
     objects
 }
@@ -164,32 +156,32 @@ fn simple_light() -> HittableList {
 fn cornell_box() -> HittableList {
     let mut objects = HittableList::new();
 
-    let red = Lambertian::new_with_color(Color::new(0.65, 0.05, 0.05));
-    let make_white = || Some(Lambertian::new_with_color(Color::new(0.73, 0.73, 0.73)));
-    let green = Lambertian::new_with_color(Color::new(0.12, 0.45, 0.15));
-    let light = DiffuseLight::new_with_color(Color::new(15.0, 15.0, 15.0));
+    let red = Arc::new(Lambertian::new_with_color(Color::new(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertian::new_with_color(Color::new(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertian::new_with_color(Color::new(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::new_with_color(Color::new(15.0, 15.0, 15.0)));
 
-    objects.add(YzRect::new(0.0, 555.0, 0.0, 555.0, 555.0, Some(green)));
+    objects.add(YzRect::new(0.0, 555.0, 0.0, 555.0, 555.0, green));
 
-    objects.add(YzRect::new(0.0, 555.0, 0.0, 555.0, 0.0, Some(red)));
+    objects.add(YzRect::new(0.0, 555.0, 0.0, 555.0, 0.0, red));
 
-    objects.add(XzRect::new(213.0, 343.0, 227.0, 332.0, 554.0, Some(light)));
+    objects.add(XzRect::new(213.0, 343.0, 227.0, 332.0, 554.0, light));
 
-    objects.add(XzRect::new(0.0, 555.0, 0.0, 555.0, 0.0, make_white()));
+    objects.add(XzRect::new(0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
 
-    objects.add(XzRect::new(0.0, 555.0, 0.0, 555.0, 555.0, make_white()));
+    objects.add(XzRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
 
-    objects.add(XyRect::new(0.0, 555.0, 0.0, 555.0, 555.0, make_white()));
+    objects.add(XyRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
 
     objects.add(BlockBox::new(
         Point3::new(130.0, 0.0, 65.0),
         Point3::new(295.0, 165.0, 230.0),
-        make_white(),
+        white.clone(),
     ));
     objects.add(BlockBox::new(
         Point3::new(265.0, 0.0, 295.0),
         Point3::new(430.0, 330.0, 460.0),
-        make_white(),
+        white,
     ));
 
     objects

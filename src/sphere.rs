@@ -1,17 +1,19 @@
+use std::sync::Arc;
+
 use crate::{Float, HitRecord, Hittable, Material, Point3, Ray, Vec3, AABB, PI};
 
 pub struct Sphere {
     center: Point3,
     radius: Float,
-    material: Option<Box<dyn Material>>,
+    material: Arc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: Point3, radius: Float, material: Option<impl Material + 'static>) -> Self {
+    pub fn new(center: Point3, radius: Float, material: Arc<dyn Material>) -> Self {
         Self {
             center,
             radius,
-            material: material.map(|m| Box::new(m) as Box<dyn Material>),
+            material,
         }
     }
 
@@ -53,7 +55,7 @@ impl Hittable for Sphere {
         let outward_normal = (rec.p - self.center) / self.radius;
         rec.set_face_normal(ray, outward_normal);
         Self::get_uv(&outward_normal, &mut rec.u, &mut rec.v);
-        rec.material = self.material.as_deref();
+        rec.material = Some(&*self.material);
 
         true
     }

@@ -1,4 +1,4 @@
-use std::mem;
+use std::{mem, sync::Arc};
 
 use crate::{Color, Float, Perlin, Point3};
 
@@ -27,19 +27,19 @@ impl Texture for SolidColor {
 }
 
 pub struct CheckerTexture {
-    odd: Box<dyn Texture>,
-    even: Box<dyn Texture>,
+    odd: Arc<dyn Texture>,
+    even: Arc<dyn Texture>,
 }
 
 impl CheckerTexture {
-    pub fn new(even: Box<dyn Texture>, odd: Box<dyn Texture>) -> Self {
+    pub fn new(even: Arc<dyn Texture>, odd: Arc<dyn Texture>) -> Self {
         Self { even, odd }
     }
 
     pub fn new_with_color(c1: Color, c2: Color) -> Self {
         Self::new(
-            Box::new(SolidColor::from(c1)),
-            Box::new(SolidColor::from(c2)),
+            Arc::new(SolidColor::from(c1)),
+            Arc::new(SolidColor::from(c2)),
         )
     }
 }

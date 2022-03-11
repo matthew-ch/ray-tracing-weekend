@@ -1,7 +1,6 @@
-use crate::{
-    Float, Hittable, HittableList, Material, Point3, UnsafeMaterialWrapper, XyRect, XzRect, YzRect,
-    AABB,
-};
+use std::sync::Arc;
+
+use crate::{Float, Hittable, HittableList, Material, Point3, XyRect, XzRect, YzRect, AABB};
 
 pub struct BlockBox {
     box_min: Point3,
@@ -10,10 +9,8 @@ pub struct BlockBox {
 }
 
 impl BlockBox {
-    pub fn new(p0: Point3, p1: Point3, material: Option<impl Material + 'static>) -> Self {
+    pub fn new(p0: Point3, p1: Point3, material: Arc<dyn Material>) -> Self {
         let mut sides = HittableList::new();
-
-        let material = material.map(UnsafeMaterialWrapper::new);
 
         sides.add(XyRect::new(
             p0.x(),

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{Color, Float, HitRecord, Point3, Ray, SolidColor, Texture, Vec3};
 use rand::random;
 
@@ -15,85 +17,25 @@ pub trait Material: Sync + Send {
     }
 }
 
-pub enum UnsafeMaterialWrapper<T: Material> {
-    Owner(*mut T),
-    Borrower(*const T),
-}
-
-unsafe impl<T: Material> Send for UnsafeMaterialWrapper<T> {}
-
-unsafe impl<T: Material> Sync for UnsafeMaterialWrapper<T> {}
-
-impl<T: Material> UnsafeMaterialWrapper<T> {
-    pub fn new(material: T) -> Self {
-        let boxed = Box::new(material);
-        Self::Owner(Box::into_raw(boxed))
-    }
-
-    pub fn borrow(other: &Self) -> Self {
-        match other {
-            UnsafeMaterialWrapper::Owner(m) => Self::Borrower(*m),
-            UnsafeMaterialWrapper::Borrower(n) => Self::Borrower(*n),
-        }
-    }
-}
-
-impl<T: Material> Clone for UnsafeMaterialWrapper<T> {
-    fn clone(&self) -> Self {
-        Self::borrow(self)
-    }
-}
-
-impl<T: Material> Drop for UnsafeMaterialWrapper<T> {
-    fn drop(&mut self) {
-        match self {
-            UnsafeMaterialWrapper::Owner(m) => unsafe { drop(Box::from_raw(*m)) },
-            UnsafeMaterialWrapper::Borrower(_) => {}
-        }
-    }
-}
-
-impl<T: Material> Material for UnsafeMaterialWrapper<T> {
-    fn emitted(&self, u: Float, v: Float, p: &Point3) -> Color {
-        match self {
-            UnsafeMaterialWrapper::Owner(m) => unsafe { (**m).emitted(u, v, p) },
-            UnsafeMaterialWrapper::Borrower(n) => unsafe { (**n).emitted(u, v, p) },
-        }
-    }
-
-    fn scatter(
-        &self,
-        ray_in: &Ray,
-        rec: &HitRecord,
-        attenuation: &mut Color,
-        scattered: &mut Ray,
-    ) -> bool {
-        match self {
-            UnsafeMaterialWrapper::Owner(m) => unsafe {
-                (**m).scatter(ray_in, rec, attenuation, scattered)
-            },
-            UnsafeMaterialWrapper::Borrower(n) => unsafe {
-                (**n).scatter(ray_in, rec, attenuation, scattered)
-            },
-        }
-    }
-}
-
 pub struct Lambertian {
-    albedo: Box<dyn Texture>,
+    albedo: Arc<dyn Texture>,
 }
 
 impl Lambertian {
     pub fn new_with_color(color: Color) -> Self {
         Self {
-            albedo: Box::new(SolidColor::from(color)),
+            albedo: Arc::new(SolidColor::from(color)),
         }
     }
 
     pub fn new_with_texture(t: impl Texture + 'static) -> Self {
         Self {
-            albedo: Box::new(t),
+            albedo: Arc::new(t),
         }
+    }
+
+    pub fn new_with_shared_texture(t: Arc<dyn Texture>) -> Self {
+        Self { albedo: t }
     }
 }
 
@@ -200,20 +142,18 @@ impl Material for Dielectric {
 }
 
 pub struct DiffuseLight {
-    emit: Box<dyn Texture>,
+    emit: Arc<dyn Texture>,
 }
 
 impl DiffuseLight {
     pub fn new_with_color(color: Color) -> Self {
         Self {
-            emit: Box::new(SolidColor::from(color)),
+            emit: Arc::new(SolidColor::from(color)),
         }
     }
 
-    pub fn new_with_texture(texture: impl Texture + 'static) -> Self {
-        Self {
-            emit: Box::new(texture),
-        }
+    pub fn new_with_texture(texture: Arc<dyn Texture>) -> Self {
+        Self { emit: texture }
     }
 }
 

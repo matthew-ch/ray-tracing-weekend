@@ -1,10 +1,12 @@
+use std::sync::Arc;
+
 use rand::random;
 
 use crate::{Float, HitRecord, Hittable, Ray, Vec3, AABB};
 
 enum BvhChild<'a> {
     Leaf(Option<&'a dyn Hittable>),
-    Node(Box<BvhNode<'a>>),
+    Node(Arc<BvhNode<'a>>),
 }
 
 use BvhChild::*;
@@ -52,8 +54,8 @@ impl<'a> BvhNode<'a> {
                 let mid = len / 2;
                 let (first, second) = objects.split_at(mid);
                 (
-                    Node(Box::new(BvhNode::new(first, time0, time1))),
-                    Node(Box::new(BvhNode::new(second, time0, time1))),
+                    Node(Arc::new(BvhNode::new(first, time0, time1))),
+                    Node(Arc::new(BvhNode::new(second, time0, time1))),
                 )
             }
         };

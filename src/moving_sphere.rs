@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{Float, HitRecord, Hittable, Material, Point3, Ray, Vec3, AABB};
 
 pub struct MovingSphere {
@@ -6,7 +8,7 @@ pub struct MovingSphere {
     time0: Float,
     time1: Float,
     radius: Float,
-    material: Option<Box<dyn Material>>,
+    material: Arc<dyn Material>,
 }
 
 impl MovingSphere {
@@ -16,7 +18,7 @@ impl MovingSphere {
         time0: Float,
         time1: Float,
         radius: Float,
-        material: Option<impl Material + 'static>,
+        material: Arc<dyn Material>,
     ) -> Self {
         Self {
             center0,
@@ -24,7 +26,7 @@ impl MovingSphere {
             time0,
             time1,
             radius,
-            material: material.map(|m| Box::new(m) as Box<dyn Material>),
+            material,
         }
     }
 
@@ -62,7 +64,7 @@ impl Hittable for MovingSphere {
         rec.p = ray.at(root);
         let outward_normal = (rec.p - self.center(ray.time())) / self.radius;
         rec.set_face_normal(ray, outward_normal);
-        rec.material = self.material.as_deref();
+        rec.material = Some(&*self.material);
 
         true
     }

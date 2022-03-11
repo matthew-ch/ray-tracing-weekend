@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use crate::{Float, HitRecord, Hittable, Ray, AABB};
 
-type Item = Box<dyn Hittable>;
+type Item = Arc<dyn Hittable>;
 
 pub struct HittableList {
     objects: Vec<Item>,
@@ -20,7 +22,11 @@ impl HittableList {
     }
 
     pub fn add(&mut self, object: impl Hittable + 'static) {
-        self.objects.push(Box::new(object));
+        self.objects.push(Arc::new(object));
+    }
+
+    pub fn add_shared(&mut self, object: Item) {
+        self.objects.push(object);
     }
 }
 
