@@ -194,6 +194,57 @@ fn cornell_box() -> HittableList {
     objects
 }
 
+fn cornell_smoke() -> HittableList {
+    let mut objects = HittableList::new();
+
+    let red = Arc::new(Lambertian::new_with_color(Color::new(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertian::new_with_color(Color::new(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertian::new_with_color(Color::new(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::new_with_color(Color::new(7.0, 7.0, 7.0)));
+
+    objects.add(YzRect::new(0.0, 555.0, 0.0, 555.0, 555.0, green));
+
+    objects.add(YzRect::new(0.0, 555.0, 0.0, 555.0, 0.0, red));
+
+    objects.add(XzRect::new(113.0, 443.0, 127.0, 432.0, 554.0, light));
+
+    objects.add(XzRect::new(0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
+
+    objects.add(XzRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
+
+    objects.add(XyRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
+
+    let object = BlockBox::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(165.0, 330.0, 165.0),
+        white.clone(),
+    );
+    let object = RotateY::new(Arc::new(object), 15.0);
+    let object = Translate::new(Arc::new(object), Vec3::new(265.0, 0.0, 295.0));
+    let object = ConstantMedium::new(
+        Arc::new(object),
+        0.01,
+        Arc::new(SolidColor::new(0.0, 0.0, 0.0)),
+    );
+    objects.add(object);
+
+    let object = BlockBox::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(165.0, 165.0, 165.0),
+        white,
+    );
+    let object = RotateY::new(Arc::new(object), -18.0);
+    let object = Translate::new(Arc::new(object), Vec3::new(130.0, 0.0, 65.0));
+    let object = ConstantMedium::new(
+        Arc::new(object),
+        0.01,
+        Arc::new(SolidColor::new(1.0, 1.0, 1.0)),
+    );
+    objects.add(object);
+
+    objects
+}
+
 fn main() {
     let mut aspect_ratio = 16.0 / 9.0;
     let mut image_width = 400;
@@ -224,7 +275,7 @@ fn main() {
             lookat = Point3::new(0.0, 2.0, 0.0);
             simple_light()
         }
-        _ => {
+        6 => {
             aspect_ratio = 1.0;
             image_width = 600;
             samples_per_pixel = 20;
@@ -234,6 +285,17 @@ fn main() {
             vfov = 40.0;
             aperture = 0.0;
             cornell_box()
+        }
+        _ => {
+            aspect_ratio = 1.0;
+            image_width = 600;
+            samples_per_pixel = 20;
+            lookfrom = Point3::new(278.0, 278.0, -800.0);
+            lookat = Point3::new(278.0, 278.0, 0.0);
+            background = Color::default();
+            vfov = 40.0;
+            aperture = 0.0;
+            cornell_smoke()
         }
     };
 

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{Float, Hittable, Ray, Vec3, AABB};
+use crate::{Float, HitRecord, Hittable, Ray, Vec3, AABB};
 
 pub struct Translate {
     inner: Arc<dyn Hittable>,
@@ -17,13 +17,7 @@ impl Translate {
 }
 
 impl Hittable for Translate {
-    fn hit<'a, 'b>(
-        &'a self,
-        ray: &crate::Ray,
-        t_min: Float,
-        t_max: Float,
-        rec: &mut crate::HitRecord<'b>,
-    ) -> bool
+    fn hit<'a, 'b>(&'a self, ray: &Ray, t_min: Float, t_max: Float, rec: &mut HitRecord<'b>) -> bool
     where
         'a: 'b,
     {

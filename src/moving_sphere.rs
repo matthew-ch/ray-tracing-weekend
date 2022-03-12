@@ -69,7 +69,7 @@ impl Hittable for MovingSphere {
         true
     }
 
-    fn bounding_box(&self, time0: Float, time1: Float, output_box: &mut crate::AABB) -> bool {
+    fn bounding_box(&self, time0: Float, time1: Float, output_box: &mut AABB) -> bool {
         *output_box = AABB::surrounding_box(
             AABB::new(
                 self.center(time0) - Vec3::new(self.radius, self.radius, self.radius),

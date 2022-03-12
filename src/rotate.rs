@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{Float, Hittable, Point3, Ray, AABB};
+use crate::{Float, HitRecord, Hittable, Point3, Ray, AABB};
 
 macro_rules! makeRotate {
     ($name: ident, $f: ident) => {
@@ -53,7 +53,7 @@ macro_rules! makeRotate {
                 ray: &Ray,
                 t_min: Float,
                 t_max: Float,
-                rec: &mut crate::HitRecord<'b>,
+                rec: &mut HitRecord<'b>,
             ) -> bool
             where
                 'a: 'b,

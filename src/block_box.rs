@@ -1,6 +1,8 @@
 use std::sync::Arc;
 
-use crate::{Float, Hittable, HittableList, Material, Point3, XyRect, XzRect, YzRect, AABB};
+use crate::{
+    Float, HitRecord, Hittable, HittableList, Material, Point3, Ray, XyRect, XzRect, YzRect, AABB,
+};
 
 pub struct BlockBox {
     box_min: Point3,
@@ -77,13 +79,7 @@ impl Hittable for BlockBox {
         true
     }
 
-    fn hit<'a, 'b>(
-        &'a self,
-        ray: &crate::Ray,
-        t_min: Float,
-        t_max: Float,
-        rec: &mut crate::HitRecord<'b>,
-    ) -> bool
+    fn hit<'a, 'b>(&'a self, ray: &Ray, t_min: Float, t_max: Float, rec: &mut HitRecord<'b>) -> bool
     where
         'a: 'b,
     {
