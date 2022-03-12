@@ -4,30 +4,14 @@ use rand::random;
 
 use crate::{Float, HitRecord, Hittable, Ray, Vec3, AABB};
 
-enum BvhChild<'a> {
-    Leaf(Option<&'a dyn Hittable>),
-    Node(Arc<BvhNode<'a>>),
-}
-
-use BvhChild::*;
-
-impl<'a> BvhChild<'a> {
-    fn inner(&'a self) -> Option<&'a dyn Hittable> {
-        match self {
-            Leaf(ref leaf) => *leaf,
-            Node(ref node) => Some(&**node),
-        }
-    }
-}
-
-pub struct BvhNode<'a> {
+pub struct BvhNode {
     bbox: AABB,
-    left: BvhChild<'a>,
-    right: BvhChild<'a>,
+    left: Arc<dyn Hittable>,
+    right: Arc<dyn Hittable>,
 }
 
-impl<'a> BvhNode<'a> {
-    pub fn new(src_objects: &[&'a dyn Hittable], time0: Float, time1: Float) -> BvhNode<'a> {
+impl BvhNode {
+    pub fn new(src_objects: &[Arc<dyn Hittable>], time0: Float, time1: Float) -> BvhNode {
         let mut objects = src_objects.to_owned();
         let axis = random::<usize>() % 3;
         let f = match axis {
@@ -35,7 +19,7 @@ impl<'a> BvhNode<'a> {
             1 => Vec3::y,
             _ => Vec3::z,
         };
-        let comparator = |a: &&dyn Hittable, b: &&dyn Hittable| {
+        let comparator = |a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>| {
             let mut box_a = AABB::default();
             let mut box_b = AABB::default();
             if !a.bounding_box(0.0, 0.0, &mut box_a) || !b.bounding_box(0.0, 0.0, &mut box_b) {
@@ -46,28 +30,25 @@ impl<'a> BvhNode<'a> {
 
         let len = src_objects.len();
 
-        let (left, right): (BvhChild, BvhChild) = match len {
-            1 => (Leaf(Some(objects[0])), Leaf(None)),
-            2 => (Leaf(Some(objects[0])), Leaf(Some(objects[1]))),
+        let (left, right) = match len {
+            0 => panic!("No objects to construct BvhNode"),
+            1 => (objects[0].clone(), objects[0].clone()),
+            2 => (objects[0].clone(), objects[1].clone()),
             _ => {
                 objects.sort_by(comparator);
                 let mid = len / 2;
                 let (first, second) = objects.split_at(mid);
                 (
-                    Node(Arc::new(BvhNode::new(first, time0, time1))),
-                    Node(Arc::new(BvhNode::new(second, time0, time1))),
+                    Arc::new(BvhNode::new(first, time0, time1)) as Arc<dyn Hittable>,
+                    Arc::new(BvhNode::new(second, time0, time1)) as Arc<dyn Hittable>,
                 )
             }
         };
 
         let mut box_left = AABB::default();
         let mut box_right = AABB::default();
-        if !left
-            .inner()
-            .map_or(false, |left| left.bounding_box(time0, time1, &mut box_left))
-            || !right.inner().map_or(false, |right| {
-                right.bounding_box(time0, time1, &mut box_right)
-            })
+        if !left.bounding_box(time0, time1, &mut box_left)
+            || !right.bounding_box(time0, time1, &mut box_right)
         {
             eprintln!("No bouding box in bvh_node constructor.");
         }
@@ -80,7 +61,7 @@ impl<'a> BvhNode<'a> {
     }
 }
 
-impl Hittable for BvhNode<'_> {
+impl Hittable for BvhNode {
     fn hit<'a, 'b>(&'a self, ray: &Ray, t_min: Float, t_max: Float, rec: &mut HitRecord<'b>) -> bool
     where
         'a: 'b,
@@ -88,13 +69,10 @@ impl Hittable for BvhNode<'_> {
         if !self.bbox.hit(ray, t_min, t_max) {
             return false;
         }
-        let hit_left = self
-            .left
-            .inner()
-            .map_or(false, |left| left.hit(ray, t_min, t_max, rec));
-        let hit_right = self.right.inner().map_or(hit_left, |right| {
-            right.hit(ray, t_min, if hit_left { rec.t } else { t_max }, rec)
-        });
+        let hit_left = self.left.hit(ray, t_min, t_max, rec);
+        let hit_right = self
+            .right
+            .hit(ray, t_min, if hit_left { rec.t } else { t_max }, rec);
         hit_left || hit_right
     }
 

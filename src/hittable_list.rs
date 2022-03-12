@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{ops::Deref, sync::Arc};
 
 use crate::{Float, HitRecord, Hittable, Ray, AABB};
 
@@ -69,5 +69,13 @@ impl Hittable for HittableList {
             first_box = false;
         }
         true
+    }
+}
+
+impl Deref for HittableList {
+    type Target = [Item];
+
+    fn deref(&self) -> &Self::Target {
+        &self.objects
     }
 }

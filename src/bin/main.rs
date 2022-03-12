@@ -245,6 +245,109 @@ fn cornell_smoke() -> HittableList {
     objects
 }
 
+fn final_scene() -> HittableList {
+    let mut boxes = HittableList::new();
+    let ground = Arc::new(Lambertian::new_with_color(Color::new(0.48, 0.83, 0.53)));
+
+    let boxes_per_side = 20;
+    for i in 0..boxes_per_side {
+        for j in 0..boxes_per_side {
+            let w = 100.0;
+            let x0 = -1000.0 + (i as Float) * w;
+            let z0 = -1000.0 + (j as Float) * w;
+            let y0 = 0.0;
+            let x1 = x0 + w;
+            let y1 = random::<Float>() * 100.0 + 1.0;
+            let z1 = z0 + w;
+            boxes.add(BlockBox::new(
+                Point3::new(x0, y0, z0),
+                Point3::new(x1, y1, z1),
+                ground.clone(),
+            ));
+        }
+    }
+
+    let mut objects = HittableList::new();
+    objects.add(BvhNode::new(&boxes, 0.0, 1.0));
+
+    let light = Arc::new(DiffuseLight::new_with_color(Color::new(7.0, 7.0, 7.0)));
+    objects.add(XzRect::new(123.0, 423.0, 147.0, 412.0, 554.0, light));
+
+    let center1 = Point3::new(400.0, 400.0, 200.0);
+    let center2 = center1 + Vec3::new(30.0, 0.0, 0.0);
+    let moving_sphere_material = Arc::new(Lambertian::new_with_color(Color::new(0.7, 0.3, 0.1)));
+    objects.add(MovingSphere::new(
+        center1,
+        center2,
+        0.0,
+        1.0,
+        50.0,
+        moving_sphere_material,
+    ));
+
+    objects.add(Sphere::new(
+        Point3::new(260.0, 150.0, 45.0),
+        50.0,
+        Arc::new(Dielectric::new(1.5)),
+    ));
+    objects.add(Sphere::new(
+        Point3::new(0.0, 150.0, 145.0),
+        50.0,
+        Arc::new(Metal::new(Color::new(0.8, 0.8, 0.9), 1.0)),
+    ));
+
+    let boundary = Arc::new(Sphere::new(
+        Point3::new(360.0, 150.0, 145.0),
+        70.0,
+        Arc::new(Dielectric::new(1.5)),
+    ));
+    objects.add_shared(boundary.clone());
+    objects.add(ConstantMedium::new(
+        boundary,
+        0.2,
+        Arc::new(SolidColor::from(Color::new(0.2, 0.4, 0.9))),
+    ));
+    let boundary = Sphere::new(Point3::default(), 5000.0, Arc::new(Dielectric::new(1.5)));
+    objects.add(ConstantMedium::new(
+        Arc::new(boundary),
+        0.0001,
+        Arc::new(SolidColor::from(Color::new(1.0, 1.0, 1.0))),
+    ));
+
+    let (data, width, height) = read_png(File::open(Path::new(r"./earthmap.png")).unwrap());
+    let earth_texture = ImageTexture::new(data, width, height);
+    let earth_surface = Lambertian::new_with_texture(earth_texture);
+    objects.add(Sphere::new(
+        Point3::new(400.0, 200.0, 400.0),
+        100.0,
+        Arc::new(earth_surface),
+    ));
+    let pertext = Arc::new(NoiseTexture::new(0.1));
+    objects.add(Sphere::new(
+        Point3::new(220.0, 280.0, 300.0),
+        80.0,
+        Arc::new(Lambertian::new_with_shared_texture(pertext)),
+    ));
+
+    let mut boxes = HittableList::new();
+    let white = Arc::new(Lambertian::new_with_color(Color::new(0.73, 0.73, 0.73)));
+    let ns = 1000;
+    for _ in 0..ns {
+        boxes.add(Sphere::new(
+            Point3::random_range(0.0..165.0),
+            10.0,
+            white.clone(),
+        ));
+    }
+
+    objects.add(Translate::new(
+        Arc::new(RotateY::new(Arc::new(BvhNode::new(&boxes, 0.0, 1.0)), 15.0)),
+        Vec3::new(-100.0, 270.0, 395.0),
+    ));
+
+    objects
+}
+
 fn main() {
     let mut aspect_ratio = 16.0 / 9.0;
     let mut image_width = 400;
@@ -286,7 +389,7 @@ fn main() {
             aperture = 0.0;
             cornell_box()
         }
-        _ => {
+        7 => {
             aspect_ratio = 1.0;
             image_width = 600;
             samples_per_pixel = 20;
@@ -296,6 +399,17 @@ fn main() {
             vfov = 40.0;
             aperture = 0.0;
             cornell_smoke()
+        }
+        _ => {
+            aspect_ratio = 1.0;
+            image_width = 800;
+            samples_per_pixel = 100;
+            background = Color::default();
+            lookfrom = Point3::new(478.0, 278.0, -600.0);
+            lookat = Point3::new(278.0, 278.0, 0.0);
+            vfov = 40.0;
+            aperture = 0.0;
+            final_scene()
         }
     };
 
