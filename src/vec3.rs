@@ -90,6 +90,33 @@ impl Vec3 {
         let r_out_parallel = -(1.0 - r_out_perp.length_squared()).abs().sqrt() * *normal;
         r_out_perp + r_out_parallel
     }
+
+    pub fn rotate_x(&self, theta: Float) -> Self {
+        let (sin, cos) = theta.sin_cos();
+        Self(
+            self.0,
+            cos * self.1 - sin * self.2,
+            sin * self.1 - cos * self.2,
+        )
+    }
+
+    pub fn rotate_y(&self, theta: Float) -> Self {
+        let (sin, cos) = theta.sin_cos();
+        Self(
+            cos * self.0 + sin * self.2,
+            self.1,
+            -sin * self.0 + cos * self.2,
+        )
+    }
+
+    pub fn rotate_z(&self, theta: Float) -> Self {
+        let (sin, cos) = theta.sin_cos();
+        Self(
+            cos * self.0 - sin * self.1,
+            sin * self.0 + cos * self.1,
+            self.2,
+        )
+    }
 }
 
 impl Neg for Vec3 {

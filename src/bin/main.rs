@@ -173,16 +173,23 @@ fn cornell_box() -> HittableList {
 
     objects.add(XyRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white.clone()));
 
-    objects.add(BlockBox::new(
-        Point3::new(130.0, 0.0, 65.0),
-        Point3::new(295.0, 165.0, 230.0),
+    let object = BlockBox::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(165.0, 330.0, 165.0),
         white.clone(),
-    ));
-    objects.add(BlockBox::new(
-        Point3::new(265.0, 0.0, 295.0),
-        Point3::new(430.0, 330.0, 460.0),
+    );
+    let object = RotateY::new(Arc::new(object), 15.0);
+    let object = Translate::new(Arc::new(object), Vec3::new(265.0, 0.0, 295.0));
+    objects.add(object);
+
+    let object = BlockBox::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(165.0, 165.0, 165.0),
         white,
-    ));
+    );
+    let object = RotateY::new(Arc::new(object), -18.0);
+    let object = Translate::new(Arc::new(object), Vec3::new(130.0, 0.0, 65.0));
+    objects.add(object);
 
     objects
 }
