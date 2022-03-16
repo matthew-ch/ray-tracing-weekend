@@ -69,12 +69,17 @@ pub fn ray_color<'a>(ray: &Ray, background: &Color, world: &'a impl Hittable, de
         .material
         .map_or(Color::default(), |m| m.emitted(rec.u, rec.v, &rec.p));
 
+    let mut pdf: Float = 0.0;
     if !rec.material.map_or(false, |mat| {
-        mat.scatter(ray, &mut rec, &mut attenuation, &mut scattered)
+        mat.scatter(ray, &mut rec, &mut attenuation, &mut scattered, &mut pdf)
     }) {
         emitted
     } else {
-        emitted + attenuation * ray_color(&scattered, background, world, depth - 1)
+        emitted
+            + attenuation
+                * rec.material.unwrap().scattering_pdf(ray, &rec, &scattered)
+                * ray_color(&scattered, background, world, depth - 1)
+                / pdf
     }
 }
 

@@ -362,7 +362,7 @@ fn main() {
     let mut focus_dist = 10.0;
     let mut background = Color::new(0.7, 0.8, 1.0);
 
-    let world = match 0 {
+    let world = match 6 {
         1 => random_scene(),
         2 => {
             aperture = 0.0;
@@ -380,8 +380,8 @@ fn main() {
         }
         6 => {
             aspect_ratio = 1.0;
-            image_width = 600;
-            samples_per_pixel = 20;
+            image_width = 400;
+            samples_per_pixel = 50;
             lookfrom = Point3::new(278.0, 278.0, -800.0);
             lookat = Point3::new(278.0, 278.0, 0.0);
             background = Color::default();

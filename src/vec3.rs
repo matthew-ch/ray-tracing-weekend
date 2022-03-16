@@ -35,6 +35,15 @@ impl Vec3 {
         Self(x * a, y * a, z)
     }
 
+    pub fn random_in_hemisphere(normal: &Self) -> Self {
+        let v = Self::random_in_unit_sphere();
+        if v.dot(&normal) > 0.0 {
+            v
+        } else {
+            -v
+        }
+    }
+
     pub const fn x(&self) -> Float {
         self.0
     }
