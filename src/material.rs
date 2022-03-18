@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{Color, Float, HitRecord, Point3, Ray, SolidColor, Texture, Vec3, PI};
+use crate::{Color, Float, HitRecord, Onb, Point3, Ray, SolidColor, Texture, Vec3, PI};
 use rand::random;
 
 pub trait Material: Sync + Send {
@@ -53,10 +53,11 @@ impl Material for Lambertian {
         scattered: &mut Ray,
         pdf: &mut Float,
     ) -> bool {
-        let direction = Vec3::random_in_hemisphere(&rec.normal);
+        let uvw = Onb::from(&rec.normal);
+        let direction = uvw.local_v(&Vec3::random_cosine_direction());
         *scattered = Ray::new(rec.p, direction.unit_vector(), ray_in.time());
         *attenuation = self.albedo.value(rec.u, rec.v, &rec.p);
-        *pdf = 0.5 / PI;
+        *pdf = uvw.w().dot(&scattered.direction()) / PI;
         true
     }
 

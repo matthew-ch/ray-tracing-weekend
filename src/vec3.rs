@@ -44,6 +44,18 @@ impl Vec3 {
         }
     }
 
+    pub fn random_cosine_direction() -> Self {
+        let r1 = random::<Float>();
+        let r2 = random::<Float>();
+        let z = (1.0 - r2).sqrt();
+        let phi = 2.0 * PI * r1;
+        let r2_t = r2.sqrt();
+        let (sin, cos) = phi.sin_cos();
+        let x = cos * r2_t;
+        let y = sin * r2_t;
+        Self(x, y, z)
+    }
+
     pub const fn x(&self) -> Float {
         self.0
     }
