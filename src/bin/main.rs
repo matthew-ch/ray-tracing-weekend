@@ -165,7 +165,9 @@ fn cornell_box() -> HittableList {
 
     objects.add(YzRect::new(0.0, 555.0, 0.0, 555.0, 0.0, red));
 
-    objects.add(XzRect::new(213.0, 343.0, 227.0, 332.0, 554.0, light));
+    objects.add(FlipFace::new(Arc::new(XzRect::new(
+        213.0, 343.0, 227.0, 332.0, 554.0, light,
+    ))));
 
     objects.add(XzRect::new(0.0, 555.0, 0.0, 555.0, 0.0, white.clone()));
 
@@ -381,7 +383,7 @@ fn main() {
         6 => {
             aspect_ratio = 1.0;
             image_width = 400;
-            samples_per_pixel = 50;
+            samples_per_pixel = 1;
             lookfrom = Point3::new(278.0, 278.0, -800.0);
             lookat = Point3::new(278.0, 278.0, 0.0);
             background = Color::default();

@@ -3,6 +3,7 @@ mod block_box;
 mod bvh_node;
 mod camera;
 mod constant_medium;
+mod flip_face;
 mod hittable;
 mod hittable_list;
 mod material;
@@ -19,12 +20,14 @@ mod vec3;
 
 pub type Float = f64;
 pub use std::f64::consts::PI;
+use std::ops::Range;
 
 pub use aabb::AABB;
 pub use block_box::BlockBox;
 pub use bvh_node::BvhNode;
 pub use camera::Camera;
 pub use constant_medium::ConstantMedium;
+pub use flip_face::FlipFace;
 pub use hittable::*;
 pub use hittable_list::HittableList;
 pub use material::*;
@@ -57,6 +60,10 @@ pub fn hit_sphere(center: &Point3, radius: Float, ray: &Ray) -> Option<Float> {
     }
 }
 
+pub fn random_range(range: Range<Float>) -> Float {
+    range.start + random::<Float>() * (range.end - range.start)
+}
+
 pub fn ray_color<'a>(ray: &Ray, background: &Color, world: &'a impl Hittable, depth: i32) -> Color {
     if depth <= 0 {
         return Color::default();
@@ -67,9 +74,9 @@ pub fn ray_color<'a>(ray: &Ray, background: &Color, world: &'a impl Hittable, de
     }
     let mut scattered = Ray::default();
     let mut attenuation = Color::default();
-    let emitted = rec
-        .material
-        .map_or(Color::default(), |m| m.emitted(rec.u, rec.v, &rec.p));
+    let emitted = rec.material.map_or(Color::default(), |m| {
+        m.emitted(ray, &rec, rec.u, rec.v, &rec.p)
+    });
 
     let mut pdf: Float = 0.0;
     if !rec.material.map_or(false, |mat| {
@@ -77,6 +84,25 @@ pub fn ray_color<'a>(ray: &Ray, background: &Color, world: &'a impl Hittable, de
     }) {
         emitted
     } else {
+        let on_light = Point3::new(
+            random_range(213.0..343.0),
+            554.0,
+            random_range(227.0..332.0),
+        );
+        let to_light = on_light - rec.p;
+        let distance_squared = to_light.length_squared();
+        let to_light = to_light.unit_vector();
+        if to_light.dot(&rec.normal) < 0.0 {
+            return emitted;
+        }
+        let light_area = (343.0 - 213.0) * (332.0 - 227.0);
+        let light_cosine = to_light.y().abs();
+        if light_cosine < 0.000001 {
+            return emitted;
+        }
+        pdf = distance_squared / (light_cosine * light_area);
+        scattered = Ray::new(rec.p, to_light, ray.time());
+
         emitted
             + attenuation
                 * rec.material.unwrap().scattering_pdf(ray, &rec, &scattered)

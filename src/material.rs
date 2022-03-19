@@ -17,7 +17,7 @@ pub trait Material: Sync + Send {
         0.0
     }
 
-    fn emitted(&self, _u: Float, _v: Float, _p: &Point3) -> Color {
+    fn emitted(&self, _ray_in: &Ray, _rec: &HitRecord, _u: Float, _v: Float, _p: &Point3) -> Color {
         Color::default()
     }
 }
@@ -68,10 +68,6 @@ impl Material for Lambertian {
         } else {
             cos / PI
         }
-    }
-
-    fn emitted(&self, _u: Float, _v: Float, _p: &Point3) -> Color {
-        Color::default()
     }
 }
 
@@ -189,8 +185,12 @@ impl Material for DiffuseLight {
         false
     }
 
-    fn emitted(&self, u: Float, v: Float, p: &Point3) -> Color {
-        self.emit.value(u, v, p)
+    fn emitted(&self, _ray_in: &Ray, rec: &HitRecord, u: Float, v: Float, p: &Point3) -> Color {
+        if rec.front_face {
+            self.emit.value(u, v, p)
+        } else {
+            Color::default()
+        }
     }
 }
 
