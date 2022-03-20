@@ -80,33 +80,30 @@ pub fn ray_color<'a>(
     if !world.hit(ray, 0.001, f64::INFINITY, &mut rec) {
         return background.clone();
     }
-    let mut scattered = Ray::default();
-    let mut attenuation = Color::default();
+    let mut srec = ScatterRecord::default();
     let emitted = rec.material.map_or(Color::default(), |m| {
         m.emitted(ray, &rec, rec.u, rec.v, &rec.p)
     });
 
-    let mut pdf_val: Float = 0.0;
     if !rec.material.map_or(false, |mat| {
         mat.scatter(
             ray,
-            &mut rec,
-            &mut attenuation,
-            &mut scattered,
-            &mut pdf_val,
+            &rec,
+            &mut srec,
         )
     }) {
         emitted
+    } else if let Some(specular_ray) = srec.specular_ray {
+        srec.attenuation * ray_color(&specular_ray, background, world, lights, depth - 1)
     } else {
-        let p0 = HittablePdf::new(lights, rec.p);
-        let p1 = CosinePdf::new(&rec.normal);
-        let mixed_pdf = MixturePdf::new(&p0, &p1);
+        let light = HittablePdf::new(lights, rec.p);
+        let mixed_pdf = MixturePdf::new(&light, srec.pdf_ptr.as_deref().unwrap());
 
-        scattered = Ray::new(rec.p, mixed_pdf.generate(), ray.time());
-        pdf_val = mixed_pdf.value(&scattered.direction());
+        let scattered = Ray::new(rec.p, mixed_pdf.generate(), ray.time());
+        let pdf_val = mixed_pdf.value(&scattered.direction());
 
         emitted
-            + attenuation
+            + srec.attenuation
                 * rec.material.unwrap().scattering_pdf(ray, &rec, &scattered)
                 * ray_color(&scattered, background, world, lights, depth - 1)
                 / pdf_val

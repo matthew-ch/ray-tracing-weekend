@@ -178,20 +178,14 @@ fn cornell_box() -> HittableList {
     let object = BlockBox::new(
         Point3::new(0.0, 0.0, 0.0),
         Point3::new(165.0, 330.0, 165.0),
-        white.clone(),
+        Arc::new(Metal::new(Color::new(0.8, 0.85, 0.88), 0.0)),
     );
     let object = RotateY::new(Arc::new(object), 15.0);
     let object = Translate::new(Arc::new(object), Vec3::new(265.0, 0.0, 295.0));
     objects.add(object);
 
-    let object = BlockBox::new(
-        Point3::new(0.0, 0.0, 0.0),
-        Point3::new(165.0, 165.0, 165.0),
-        white,
-    );
-    let object = RotateY::new(Arc::new(object), -18.0);
-    let object = Translate::new(Arc::new(object), Vec3::new(130.0, 0.0, 65.0));
-    objects.add(object);
+    let glass = Arc::new(Dielectric::new(1.5));
+    objects.add(Sphere::new(Point3::new(190.0, 90.0, 190.0), 90.0, glass));
 
     objects
 }
@@ -385,7 +379,7 @@ fn main() {
         6 => {
             aspect_ratio = 1.0;
             image_width = 400;
-            samples_per_pixel = 100;
+            samples_per_pixel = 40;
             lookfrom = Point3::new(278.0, 278.0, -800.0);
             lookat = Point3::new(278.0, 278.0, 0.0);
             background = Color::default();
