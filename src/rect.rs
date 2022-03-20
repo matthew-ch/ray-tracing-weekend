@@ -1,8 +1,8 @@
-use crate::{Float, HitRecord, Hittable, Material, Point3, Ray, Vec3, AABB};
+use crate::{random_range, Float, HitRecord, Hittable, Material, Point3, Ray, Vec3, AABB};
 use std::sync::Arc;
 
 macro_rules! makeRect {
-    ($name: ident, $a: ident, $a0: ident, $a1: ident, $b: ident, $b0: ident, $b1: ident, $c: ident, $p0: ident, $p1: ident, $on: expr) => {
+    ($name: ident, $a: ident, $a0: ident, $a1: ident, $b: ident, $b0: ident, $b1: ident, $c: ident, $p: ident, $on: expr) => {
         pub struct $name {
             material: Arc<dyn Material>,
             $a0: Float,
@@ -35,8 +35,8 @@ macro_rules! makeRect {
         impl Hittable for $name {
             fn bounding_box(&self, _time0: Float, _time1: Float, output_box: &mut AABB) -> bool {
                 *output_box = AABB::new(
-                    $p0(self.$a0, self.$b0, self.k),
-                    $p1(self.$a1, self.$b1, self.k),
+                    $p(self.$a0, self.$b0, self.k - 0.0001),
+                    $p(self.$a1, self.$b1, self.k + 0.0001),
                 );
                 true
             }
@@ -69,18 +69,33 @@ macro_rules! makeRect {
                 rec.p = ray.at(t);
                 true
             }
+
+            fn pdf_value(&self, o: &Point3, v: &Vec3) -> Float {
+                let mut rec = HitRecord::default();
+                if !self.hit(&Ray::new(*o, *v, 0.0), 0.001, Float::INFINITY, &mut rec) {
+                    return 0.0;
+                }
+                let area = (self.$a1 - self.$a0) * (self.$b1 - self.$b0);
+                let distance_squared = rec.t * rec.t * v.length_squared();
+                let cosine = (v.dot(&rec.normal) / v.length()).abs();
+                distance_squared / (cosine * area)
+            }
+
+            fn random(&self, o: &Point3) -> Vec3 {
+                let random_point = $p(
+                    random_range(self.$a0..self.$a1),
+                    random_range(self.$b0..self.$b1),
+                    self.k,
+                );
+                random_point - *o
+            }
         }
     };
 }
 
 #[inline]
-fn xy0(x: Float, y: Float, k: Float) -> Point3 {
-    Point3::new(x, y, k - 0.0001)
-}
-
-#[inline]
-fn xy1(x: Float, y: Float, k: Float) -> Point3 {
-    Point3::new(x, y, k + 0.0001)
+fn xy(x: Float, y: Float, k: Float) -> Point3 {
+    Point3::new(x, y, k)
 }
 
 makeRect!(
@@ -92,19 +107,13 @@ makeRect!(
     y0,
     y1,
     z,
-    xy0,
-    xy1,
+    xy,
     Vec3::new(0.0, 0.0, 1.0)
 );
 
 #[inline]
-fn xz0(x: Float, z: Float, k: Float) -> Point3 {
-    Point3::new(x, k - 0.0001, z)
-}
-
-#[inline]
-fn xz1(x: Float, z: Float, k: Float) -> Point3 {
-    Point3::new(x, k + 0.0001, z)
+fn xz(x: Float, z: Float, k: Float) -> Point3 {
+    Point3::new(x, k, z)
 }
 
 makeRect!(
@@ -116,19 +125,13 @@ makeRect!(
     z0,
     z1,
     y,
-    xz0,
-    xz1,
+    xz,
     Vec3::new(0.0, 1.0, 0.0)
 );
 
 #[inline]
-fn yz0(y: Float, z: Float, k: Float) -> Point3 {
-    Point3::new(k - 0.0001, y, z)
-}
-
-#[inline]
-fn yz1(y: Float, z: Float, k: Float) -> Point3 {
-    Point3::new(k + 0.0001, y, z)
+fn yz(y: Float, z: Float, k: Float) -> Point3 {
+    Point3::new(k, y, z)
 }
 
 makeRect!(
@@ -140,7 +143,6 @@ makeRect!(
     z0,
     z1,
     x,
-    yz0,
-    yz1,
+    yz,
     Vec3::new(1.0, 0.0, 0.0)
 );

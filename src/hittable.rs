@@ -36,4 +36,12 @@ pub trait Hittable: Sync + Send {
     fn bounding_box(&self, _time0: Float, _time1: Float, _output_box: &mut AABB) -> bool {
         false
     }
+
+    fn pdf_value(&self, _o: &Point3, _v: &Vec3) -> Float {
+        0.0
+    }
+
+    fn random(&self, _o: &Vec3) -> Vec3 {
+        Vec3::new(1.0, 0.0, 0.0)
+    }
 }

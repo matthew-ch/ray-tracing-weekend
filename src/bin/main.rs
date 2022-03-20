@@ -364,6 +364,8 @@ fn main() {
     let mut focus_dist = 10.0;
     let mut background = Color::new(0.7, 0.8, 1.0);
 
+    let lights = XzRect::new(213.0, 343.0, 227.0, 332.0, 554.0, Arc::new(EmptyMaterial));
+
     let world = match 6 {
         1 => random_scene(),
         2 => {
@@ -383,7 +385,7 @@ fn main() {
         6 => {
             aspect_ratio = 1.0;
             image_width = 400;
-            samples_per_pixel = 1;
+            samples_per_pixel = 100;
             lookfrom = Point3::new(278.0, 278.0, -800.0);
             lookat = Point3::new(278.0, 278.0, 0.0);
             background = Color::default();
@@ -430,6 +432,7 @@ fn main() {
     );
 
     let world_ref = unsafe { transmute::<_, &'static HittableList>(&world) };
+    let lights_ref = unsafe { transmute::<_, &'static XzRect>(&lights) };
 
     let n_threads = 10;
 
@@ -438,6 +441,7 @@ fn main() {
             spawn(move || {
                 render(
                     world_ref,
+                    lights_ref,
                     background,
                     cam,
                     image_width,

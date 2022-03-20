@@ -9,6 +9,7 @@ mod hittable_list;
 mod material;
 mod moving_sphere;
 mod onb;
+mod pdf;
 mod perlin;
 mod ray;
 mod rect;
@@ -33,6 +34,7 @@ pub use hittable_list::HittableList;
 pub use material::*;
 pub use moving_sphere::MovingSphere;
 pub use onb::Onb;
+pub use pdf::*;
 pub use perlin::Perlin;
 use rand::random;
 pub use ray::Ray;
@@ -64,7 +66,13 @@ pub fn random_range(range: Range<Float>) -> Float {
     range.start + random::<Float>() * (range.end - range.start)
 }
 
-pub fn ray_color<'a>(ray: &Ray, background: &Color, world: &'a impl Hittable, depth: i32) -> Color {
+pub fn ray_color<'a>(
+    ray: &Ray,
+    background: &Color,
+    world: &'a impl Hittable,
+    lights: &'a impl Hittable,
+    depth: i32,
+) -> Color {
     if depth <= 0 {
         return Color::default();
     }
@@ -78,41 +86,36 @@ pub fn ray_color<'a>(ray: &Ray, background: &Color, world: &'a impl Hittable, de
         m.emitted(ray, &rec, rec.u, rec.v, &rec.p)
     });
 
-    let mut pdf: Float = 0.0;
+    let mut pdf_val: Float = 0.0;
     if !rec.material.map_or(false, |mat| {
-        mat.scatter(ray, &mut rec, &mut attenuation, &mut scattered, &mut pdf)
+        mat.scatter(
+            ray,
+            &mut rec,
+            &mut attenuation,
+            &mut scattered,
+            &mut pdf_val,
+        )
     }) {
         emitted
     } else {
-        let on_light = Point3::new(
-            random_range(213.0..343.0),
-            554.0,
-            random_range(227.0..332.0),
-        );
-        let to_light = on_light - rec.p;
-        let distance_squared = to_light.length_squared();
-        let to_light = to_light.unit_vector();
-        if to_light.dot(&rec.normal) < 0.0 {
-            return emitted;
-        }
-        let light_area = (343.0 - 213.0) * (332.0 - 227.0);
-        let light_cosine = to_light.y().abs();
-        if light_cosine < 0.000001 {
-            return emitted;
-        }
-        pdf = distance_squared / (light_cosine * light_area);
-        scattered = Ray::new(rec.p, to_light, ray.time());
+        let p0 = HittablePdf::new(lights, rec.p);
+        let p1 = CosinePdf::new(&rec.normal);
+        let mixed_pdf = MixturePdf::new(&p0, &p1);
+
+        scattered = Ray::new(rec.p, mixed_pdf.generate(), ray.time());
+        pdf_val = mixed_pdf.value(&scattered.direction());
 
         emitted
             + attenuation
                 * rec.material.unwrap().scattering_pdf(ray, &rec, &scattered)
-                * ray_color(&scattered, background, world, depth - 1)
-                / pdf
+                * ray_color(&scattered, background, world, lights, depth - 1)
+                / pdf_val
     }
 }
 
 pub fn render<'a>(
     world: &'a impl Hittable,
+    lights: &'a impl Hittable,
     background: Color,
     cam: Camera,
     image_width: u32,
@@ -133,7 +136,7 @@ pub fn render<'a>(
                     u + random::<Float>() / (image_width - 1) as Float,
                     v + random::<Float>() / (image_height - 1) as Float,
                 );
-                color += ray_color(&ray, &background, world, max_depth);
+                color += ray_color(&ray, &background, world, lights, max_depth);
             }
             image.push(color);
         }

@@ -22,6 +22,21 @@ pub trait Material: Sync + Send {
     }
 }
 
+pub struct EmptyMaterial;
+
+impl Material for EmptyMaterial {
+    fn scatter(
+        &self,
+        _ray_in: &Ray,
+        _rec: &HitRecord,
+        _attenuation: &mut Color,
+        _scattered: &mut Ray,
+        _pdf: &mut Float,
+    ) -> bool {
+        false
+    }
+}
+
 pub struct Lambertian {
     albedo: Arc<dyn Texture>,
 }
