@@ -178,7 +178,7 @@ fn cornell_box() -> HittableList {
     let object = BlockBox::new(
         Point3::new(0.0, 0.0, 0.0),
         Point3::new(165.0, 330.0, 165.0),
-        Arc::new(Metal::new(Color::new(0.8, 0.85, 0.88), 0.0)),
+        white,
     );
     let object = RotateY::new(Arc::new(object), 15.0);
     let object = Translate::new(Arc::new(object), Vec3::new(265.0, 0.0, 295.0));
@@ -358,7 +358,21 @@ fn main() {
     let mut focus_dist = 10.0;
     let mut background = Color::new(0.7, 0.8, 1.0);
 
-    let lights = XzRect::new(213.0, 343.0, 227.0, 332.0, 554.0, Arc::new(EmptyMaterial));
+    let mut lights = HittableList::new();
+    lights.add(XzRect::new(
+        213.0,
+        343.0,
+        227.0,
+        332.0,
+        554.0,
+        Arc::new(EmptyMaterial),
+    ));
+    lights.add(Sphere::new(
+        Point3::new(190.0, 90.0, 190.0),
+        90.0,
+        Arc::new(EmptyMaterial),
+    ));
+    let lights: Arc<dyn Hittable> = Arc::new(lights);
 
     let world = match 6 {
         1 => random_scene(),
@@ -379,7 +393,7 @@ fn main() {
         6 => {
             aspect_ratio = 1.0;
             image_width = 400;
-            samples_per_pixel = 40;
+            samples_per_pixel = 100;
             lookfrom = Point3::new(278.0, 278.0, -800.0);
             lookat = Point3::new(278.0, 278.0, 0.0);
             background = Color::default();
@@ -426,7 +440,7 @@ fn main() {
     );
 
     let world_ref = unsafe { transmute::<_, &'static HittableList>(&world) };
-    let lights_ref = unsafe { transmute::<_, &'static XzRect>(&lights) };
+    let lights_ref = unsafe { transmute::<_, &'static dyn Hittable>(&*lights) };
 
     let n_threads = 10;
 

@@ -56,6 +56,18 @@ impl Vec3 {
         Self(x, y, z)
     }
 
+    pub fn random_to_sphere(radius: Float, distance_squared: Float) -> Self {
+        let r1 = random::<Float>();
+        let r2 = random::<Float>();
+        let z = 1.0 + r2 * ((1.0 - radius * radius / distance_squared).sqrt() - 1.0);
+        let phi = 2.0 * PI * r1;
+        let (sin, cos) = phi.sin_cos();
+        let w = (1.0 - z * z).sqrt();
+        let x = cos * w;
+        let y = sin * w;
+        Self(x, y, z)
+    }
+
     pub const fn x(&self) -> Float {
         self.0
     }
@@ -226,12 +238,20 @@ impl DivAssign<Float> for Vec3 {
     }
 }
 
+fn clamp_nan(x: Float) -> Float {
+    if x.is_nan() {
+        0.0
+    } else {
+        x
+    }
+}
+
 impl From<Vec3> for [u8; 3] {
     fn from(v: Vec3) -> Self {
         [
-            (v.0 * 255.999) as u8,
-            (v.1 * 255.999) as u8,
-            (v.2 * 255.999) as u8,
+            (clamp_nan(v.0) * 255.999) as u8,
+            (clamp_nan(v.1) * 255.999) as u8,
+            (clamp_nan(v.2) * 255.999) as u8,
         ]
     }
 }

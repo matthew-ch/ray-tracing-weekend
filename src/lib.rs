@@ -70,7 +70,7 @@ pub fn ray_color<'a>(
     ray: &Ray,
     background: &Color,
     world: &'a impl Hittable,
-    lights: &'a impl Hittable,
+    lights: &'a dyn Hittable,
     depth: i32,
 ) -> Color {
     if depth <= 0 {
@@ -85,13 +85,10 @@ pub fn ray_color<'a>(
         m.emitted(ray, &rec, rec.u, rec.v, &rec.p)
     });
 
-    if !rec.material.map_or(false, |mat| {
-        mat.scatter(
-            ray,
-            &rec,
-            &mut srec,
-        )
-    }) {
+    if !rec
+        .material
+        .map_or(false, |mat| mat.scatter(ray, &rec, &mut srec))
+    {
         emitted
     } else if let Some(specular_ray) = srec.specular_ray {
         srec.attenuation * ray_color(&specular_ray, background, world, lights, depth - 1)
@@ -112,7 +109,7 @@ pub fn ray_color<'a>(
 
 pub fn render<'a>(
     world: &'a impl Hittable,
-    lights: &'a impl Hittable,
+    lights: &'a dyn Hittable,
     background: Color,
     cam: Camera,
     image_width: u32,

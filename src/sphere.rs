@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::{Float, HitRecord, Hittable, Material, Point3, Ray, Vec3, AABB, PI};
+use crate::{Float, HitRecord, Hittable, Material, Onb, Point3, Ray, Vec3, AABB, PI};
 
 pub struct Sphere {
     center: Point3,
@@ -66,5 +66,23 @@ impl Hittable for Sphere {
             self.center + Vec3::new(self.radius, self.radius, self.radius),
         );
         true
+    }
+
+    fn pdf_value(&self, o: &Point3, v: &Vec3) -> Float {
+        let mut rec = HitRecord::default();
+        if !self.hit(&Ray::new(*o, *v, 0.0), 0.001, Float::INFINITY, &mut rec) {
+            return 0.0;
+        }
+        let cos_theta_max =
+            (1.0 - self.radius * self.radius / (self.center - *o).length_squared()).sqrt();
+        let solid_angle = 2.0 * PI * (1.0 - cos_theta_max);
+        return 1.0 / solid_angle;
+    }
+
+    fn random(&self, o: &Vec3) -> Vec3 {
+        let direction = self.center - *o;
+        let distance_squared = direction.length_squared();
+        let uvw = Onb::from(&direction);
+        uvw.local_v(&Vec3::random_to_sphere(self.radius, distance_squared))
     }
 }

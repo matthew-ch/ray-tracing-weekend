@@ -1,6 +1,8 @@
 use std::{ops::Deref, sync::Arc};
 
-use crate::{Float, HitRecord, Hittable, Ray, AABB};
+use rand::random;
+
+use crate::{Float, HitRecord, Hittable, Point3, Ray, Vec3, AABB};
 
 type Item = Arc<dyn Hittable>;
 
@@ -69,6 +71,21 @@ impl Hittable for HittableList {
             first_box = false;
         }
         true
+    }
+
+    fn pdf_value(&self, o: &Point3, v: &Vec3) -> Float {
+        let weight = 1.0 / (self.objects.len() as Float);
+        let sum = self
+            .objects
+            .iter()
+            .map(|object| weight * object.pdf_value(o, v))
+            .sum();
+        sum
+    }
+
+    fn random(&self, o: &Vec3) -> Vec3 {
+        let idx = random::<usize>() % self.objects.len();
+        self.objects[idx].random(o)
     }
 }
 
